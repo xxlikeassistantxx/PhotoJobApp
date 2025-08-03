@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.MainPage"
+             Title="Photo Job Manager">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="20,10" BackgroundColor="{StaticResource Primary}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+                <Label Grid.Column="0" 
+                       Text="Photo Job Manager" 
+                       Style="{StaticResource Headline}" 
+                       TextColor="White"
+                       VerticalOptions="Center"/>
+                <Button Grid.Column="1" 
+                        Text="🔍" 
+                        FontSize="16"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        CornerRadius="20"
+                        BackgroundColor="White"
+                        TextColor="{StaticResource Primary}"
+                        Margin="5,0"
+                        Clicked="OnSearchClicked"/>
+                <Button Grid.Column="2" 
+                        Text="📊" 
+                        FontSize="16"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        CornerRadius="20"
+                        BackgroundColor="White"
+                        TextColor="{StaticResource Primary}"
+                        Margin="5,0"
+                        Clicked="OnFilterClicked"/>
+                <Button Grid.Column="3" 
+                        Text="⚙️" 
+                        FontSize="16"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        CornerRadius="20"
+                        BackgroundColor="White"
+                        TextColor="{StaticResource Primary}"
+                        Margin="5,0"
+                        Clicked="OnJobTypesClicked"/>
+                <Button Grid.Column="4" 
+                        Text="+" 
+                        FontSize="24"
+                        WidthRequest="50"
+                        HeightRequest="50"
+                        CornerRadius="25"
+                        BackgroundColor="White"
+                        TextColor="{StaticResource Primary}"
+                        Clicked="OnAddJobClicked"/>
+            </Grid>
+        </Grid>
+
+        <!-- Job List -->
+        <CollectionView Grid.Row="1" 
+                       x:Name="JobsCollectionView" 
+                       ItemsSource="{Binding Jobs}"
+                       Margin="20">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Margin="0,5" Padding="15" CornerRadius="10" HasShadow="True">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnJobTapped" CommandParameter="{Binding .}"/>
+                            <TapGestureRecognizer Tapped="OnJobLongPressed" CommandParameter="{Binding .}" NumberOfTapsRequired="2"/>
+                        </Frame.GestureRecognizers>
+                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                            <Label Grid.Row="0" Grid.Column="0"
+                                   Text="{Binding Title}" 
+                                   Style="{StaticResource SubHeadline}"
+                                   FontAttributes="Bold"/>
+                            <Label Grid.Row="0" Grid.Column="1"
+                                   Text="{Binding Status}" 
+                                   TextColor="{Binding StatusColor}"
+                                   FontSize="12"
+                                   VerticalOptions="Center"/>
+                            
+                            <Label Grid.Row="1" Grid.Column="0"
+                                   Text="{Binding Description}" 
+                                   Style="{StaticResource BodyText}"
+                                   MaxLines="2"
+                                   Margin="0,5,0,0"/>
+                            <Label Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding FormattedPrice}" 
+                                   TextColor="Green"
+                                   FontSize="12"
+                                   VerticalOptions="Center"/>
+                            
+                            <StackLayout Grid.Row="2" Grid.Column="0" 
+                                       Orientation="Horizontal" 
+                                       Margin="0,10,0,0">
+                                <Label Text="{Binding ClientName}" 
+                                       Style="{StaticResource CaptionText}"
+                                       TextColor="Gray"/>
+                                <Label Text="  " 
+                                       Style="{StaticResource CaptionText}"
+                                       TextColor="Gray"/>
+                                <Label Text="{Binding FormattedCreatedDate}" 
+                                       Style="{StaticResource CaptionText}"
+                                       TextColor="Gray"/>
+                            </StackLayout>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Status Bar -->
+        <Grid Grid.Row="2" Padding="20,10" BackgroundColor="LightGray">
+            <Label Text="{Binding Jobs.Count, StringFormat='{0} jobs total'}" 
+                   Style="{StaticResource CaptionText}"
+                   HorizontalOptions="Center"/>
+        </Grid>
+    </Grid>
+
+</ContentPage>

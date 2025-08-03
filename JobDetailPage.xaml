@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.JobDetailPage"
+             Title="Job Details">
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="15">
+            <!-- Job Title -->
+            <Frame Padding="15" CornerRadius="10" HasShadow="True">
+                <StackLayout>
+                    <Label Text="{Binding Title}" 
+                           Style="{StaticResource Headline}" 
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Status}" 
+                           TextColor="{Binding StatusColor}"
+                           FontSize="16"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Price and Dates -->
+            <Frame Padding="15" CornerRadius="10" HasShadow="True">
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                    <Label Grid.Row="0" Grid.Column="0" 
+                           Text="Price" 
+                           Style="{StaticResource SubHeadline}"/>
+                    <Label Grid.Row="0" Grid.Column="1" 
+                           Text="{Binding FormattedPrice}" 
+                           TextColor="Green"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="End"/>
+                    
+                    <Label Grid.Row="1" Grid.Column="0" 
+                           Text="Created" 
+                           Style="{StaticResource CaptionText}"
+                           TextColor="Gray"
+                           Margin="0,10,0,0"/>
+                    <Label Grid.Row="1" Grid.Column="1" 
+                           Text="{Binding FormattedCreatedDate}" 
+                           Style="{StaticResource CaptionText}"
+                           TextColor="Gray"
+                           HorizontalOptions="End"
+                           Margin="0,10,0,0"/>
+                </Grid>
+            </Frame>
+
+            <!-- Client Information -->
+            <Frame Padding="15" CornerRadius="10" HasShadow="True">
+                <StackLayout>
+                    <Label Text="Client Information" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding ClientName}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                    <Label Text="{Binding ClientPhone}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                    <Label Text="{Binding ClientEmail}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Description -->
+            <Frame Padding="15" CornerRadius="10" HasShadow="True">
+                <StackLayout>
+                    <Label Text="Description" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Description}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Location and Due Date -->
+            <Frame Padding="15" CornerRadius="10" HasShadow="True">
+                <StackLayout>
+                    <Label Text="Location and Due Date" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Location}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                    <Label Text="{Binding FormattedDueDate}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Notes -->
+            <Frame Padding="15" CornerRadius="10" HasShadow="True">
+                <StackLayout>
+                    <Label Text="Notes" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Notes}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Urgent Flag -->
+            <Frame Padding="15" CornerRadius="10" HasShadow="True" 
+                   BackgroundColor="{Binding IsUrgent, Converter={StaticResource BoolToColorConverter}}">
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="🚨 URGENT" 
+                           IsVisible="{Binding IsUrgent}"
+                           TextColor="White"
+                           FontAttributes="Bold"/>
+                    <Label Text="Not Urgent" 
+                           IsVisible="{Binding IsUrgent, Converter={StaticResource InverseBoolConverter}}"
+                           TextColor="Gray"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Action Buttons -->
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,20,0,0">
+                <Button Text="Edit" 
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        WidthRequest="100"
+                        Margin="10,0"
+                        Clicked="OnEditClicked"/>
+                <Button Text="Delete" 
+                        BackgroundColor="Red"
+                        TextColor="White"
+                        WidthRequest="100"
+                        Margin="10,0"
+                        Clicked="OnDeleteClicked"/>
+            </StackLayout>
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage> 

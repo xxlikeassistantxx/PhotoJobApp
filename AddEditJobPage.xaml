@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.AddEditJobPage"
+             Title="Add/Edit Job">
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="15">
+            <!-- Title -->
+            <Label Text="Job Title *" Style="{StaticResource SubHeadline}"/>
+            <Entry x:Name="TitleEntry" Placeholder="Enter job title" Text="{Binding Title}"/>
+
+            <!-- Description -->
+            <Label Text="Description" Style="{StaticResource SubHeadline}"/>
+            <Editor x:Name="DescriptionEditor" Placeholder="Enter job description" 
+                    Text="{Binding Description}" HeightRequest="80"/>
+
+            <!-- Client Information -->
+            <Label Text="Client Information" Style="{StaticResource SubHeadline}"/>
+            <Entry x:Name="ClientNameEntry" Placeholder="Client name *" Text="{Binding ClientName}"/>
+            <Entry x:Name="ClientPhoneEntry" Placeholder="Phone number" Text="{Binding ClientPhone}" Keyboard="Telephone"/>
+            <Entry x:Name="ClientEmailEntry" Placeholder="Email address" Text="{Binding ClientEmail}" Keyboard="Email"/>
+
+            <!-- Price -->
+            <Label Text="Price *" Style="{StaticResource SubHeadline}"/>
+            <Entry x:Name="PriceEntry" Placeholder="0.00" Text="{Binding Price}" Keyboard="Numeric"/>
+
+            <!-- Status -->
+            <Label Text="Status *" Style="{StaticResource SubHeadline}"/>
+            <Picker x:Name="StatusPicker" Title="Select status" />
+
+            <!-- Dates -->
+            <Label Text="Due Date" Style="{StaticResource SubHeadline}"/>
+            <DatePicker x:Name="DueDatePicker" Date="{Binding DueDate}"/>
+
+            <!-- Location -->
+            <Label Text="Location" Style="{StaticResource SubHeadline}"/>
+            <Entry x:Name="LocationEntry" Placeholder="Job location" Text="{Binding Location}"/>
+
+            <!-- Notes -->
+            <Label Text="Notes" Style="{StaticResource SubHeadline}"/>
+            <Editor x:Name="NotesEditor" Placeholder="Additional notes" 
+                    Text="{Binding Notes}" HeightRequest="80"/>
+
+            <!-- Urgent Flag -->
+            <StackLayout Orientation="Horizontal">
+                <CheckBox x:Name="UrgentCheckBox" IsChecked="{Binding IsUrgent}"/>
+                <Label Text="Mark as urgent" VerticalOptions="Center" Margin="10,0,0,0"/>
+            </StackLayout>
+
+            <!-- Buttons -->
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,20,0,0">
+                <Button Text="Save" 
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        WidthRequest="120"
+                        Margin="10,0"
+                        Clicked="OnSaveClicked"/>
+                <Button Text="Cancel" 
+                        BackgroundColor="Gray"
+                        TextColor="White"
+                        WidthRequest="120"
+                        Margin="10,0"
+                        Clicked="OnCancelClicked"/>
+            </StackLayout>
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage> 
