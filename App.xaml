@@ -14,6 +14,10 @@
             <!-- Value Converters -->
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <converters:IntToBoolConverter x:Key="IntToBoolConverter" />
+            <converters:IntToBoolInvertedConverter x:Key="IntToBoolInvertedConverter" />
+            <converters:StringToBoolConverter x:Key="StringToBoolConverter" />
+            <converters:StringToDateConverter x:Key="StringToDateConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.MainApplicationPage"
+             Title="Photo Job Manager">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Grid Grid.Row="0" Padding="20,10" BackgroundColor="Blue">
+            <Label Text="Photo Job Manager" 
+                   TextColor="White"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   VerticalOptions="Center"/>
+        </Grid>
+
+        <!-- Main Content -->
+        <StackLayout Grid.Row="1" Padding="20" Spacing="10">
+            <Label Text="Welcome to Photo Job Manager!" 
+                   FontSize="18" 
+                   HorizontalOptions="Center"/>
+            
+            <Label Text="This is the main application page." 
+                   FontSize="14" 
+                   HorizontalOptions="Center"/>
+            
+            <Button Text="Add New Job" 
+                    Clicked="OnAddJobClicked"
+                    BackgroundColor="Green"
+                    TextColor="White"
+                    Margin="0,20,0,0"/>
+            
+            <Button Text="Search Jobs" 
+                    Clicked="OnSearchClicked"
+                    BackgroundColor="Orange"
+                    TextColor="White"/>
+            
+            <Button Text="Job Types" 
+                    Clicked="OnJobTypesClicked"
+                    BackgroundColor="Purple"
+                    TextColor="White"/>
+        </StackLayout>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2" Padding="20,10" BackgroundColor="LightGray">
+            <Button Text="Sign Out" 
+                    Clicked="OnSignOutClicked"
+                    HorizontalOptions="End"
+                    BackgroundColor="Red"
+                    TextColor="White"/>
+        </Grid>
+    </Grid>
+</ContentPage> 

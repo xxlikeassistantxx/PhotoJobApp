@@ -97,15 +97,18 @@ namespace PhotoJobApp.Services
                     // Store authentication data
                     _ = StoreAuthData(user);
 
+                    // Send email verification
+                    await SendEmailVerificationAsync(authResponse.IdToken);
+
                     return (true, user, null);
                 }
 
-                return (false, null, "Unknown error occurred during sign up");
+                return (false, null, "Sign up failed. Please try again.");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Firebase SignUp Exception: {ex.Message}");
-                return (false, null, $"Network error: {ex.Message}");
+                return (false, null, $"Sign up failed: {ex.Message}");
             }
         }
 
@@ -251,8 +254,147 @@ namespace PhotoJobApp.Services
                 "INVALID_EMAIL" => "Please enter a valid email address.",
                 "TOO_MANY_ATTEMPTS_TRY_LATER" => "Too many failed attempts. Please try again later.",
                 "USER_DISABLED" => "This account has been disabled.",
+                "MISSING_EMAIL" => "Email address is required.",
+                "INVALID_REQUEST_TYPE" => "Invalid request type.",
                 _ => $"Authentication error: {errorCode}"
             };
+        }
+
+        public async Task<bool> SendEmailVerificationAsync(string idToken)
+        {
+            try
+            {
+                var requestData = new
+                {
+                    requestType = "VERIFY_EMAIL",
+                    idToken = idToken
+                };
+
+                var json = JsonSerializer.Serialize(requestData);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var url = $"{FIREBASE_AUTH_URL}:sendOobCode?key={FIREBASE_API_KEY}";
+                System.Diagnostics.Debug.WriteLine($"Firebase SendEmailVerification URL: {url}");
+
+                var response = await _httpClient.PostAsync(url, content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                System.Diagnostics.Debug.WriteLine($"Firebase SendEmailVerification Response Status: {response.StatusCode}");
+                System.Diagnostics.Debug.WriteLine($"Firebase SendEmailVerification Response: {responseContent}");
+
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Firebase SendEmailVerification Exception: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> IsEmailVerifiedAsync(string idToken)
+        {
+            try
+            {
+                var requestData = new
+                {
+                    idToken = idToken
+                };
+
+                var json = JsonSerializer.Serialize(requestData);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var url = $"{FIREBASE_AUTH_URL}:lookup?key={FIREBASE_API_KEY}";
+                System.Diagnostics.Debug.WriteLine($"Firebase IsEmailVerified URL: {url}");
+
+                var response = await _httpClient.PostAsync(url, content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                System.Diagnostics.Debug.WriteLine($"Firebase IsEmailVerified Response Status: {response.StatusCode}");
+                System.Diagnostics.Debug.WriteLine($"Firebase IsEmailVerified Response: {responseContent}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var lookupResponse = JsonSerializer.Deserialize<FirebaseLookupResponse>(responseContent);
+                    return lookupResponse?.Users?.FirstOrDefault()?.EmailVerified ?? false;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Firebase IsEmailVerified Exception: {ex.Message}");
+                return false;
+            }
+        }
+
+        public class FirebaseLookupResponse
+        {
+            [JsonPropertyName("users")]
+            public List<FirebaseUserInfo>? Users { get; set; }
+        }
+
+        public class FirebaseUserInfo
+        {
+            [JsonPropertyName("localId")]
+            public string? LocalId { get; set; }
+            
+            [JsonPropertyName("email")]
+            public string? Email { get; set; }
+            
+            [JsonPropertyName("emailVerified")]
+            public bool EmailVerified { get; set; }
+        }
+
+        public async Task<(bool success, string? error)> SendPasswordResetEmailAsync(string email)
+        {
+            try
+            {
+                var requestData = new
+                {
+                    requestType = "PASSWORD_RESET",
+                    email = email
+                };
+
+                var json = JsonSerializer.Serialize(requestData);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var url = $"{FIREBASE_AUTH_URL}:sendOobCode?key={FIREBASE_API_KEY}";
+                System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail URL: {url}");
+                System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail Request: {json}");
+
+                var response = await _httpClient.PostAsync(url, content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail Response Status: {response.StatusCode}");
+                System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail Response: {responseContent}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return (true, null);
+                }
+
+                // Parse error response if available
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<FirebaseAuthResponse>(responseContent);
+                    if (errorResponse?.Error != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail Error: {errorResponse.Error.Message}");
+                        return (false, GetErrorMessage(errorResponse.Error.Message ?? "Unknown error"));
+                    }
+                }
+                catch
+                {
+                    // Ignore parsing errors for error responses
+                }
+
+                return (false, "Failed to send password reset email. Please try again.");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail Exception: {ex.Message}");
+                return (false, $"Network error: {ex.Message}");
+            }
         }
     }
 } 

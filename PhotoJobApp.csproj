@@ -41,21 +41,22 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		
 		<!-- iOS Code Signing and Provisioning -->
-		<CodesignKey>iPhone Developer</CodesignKey>
+		<CodesignKey>Apple Development</CodesignKey>
 		<CodesignProvision>Automatic</CodesignProvision>
 		<MtouchLink>None</MtouchLink>
 		<MtouchDebug>true</MtouchDebug>
 		<MtouchNoSymbolStrip>true</MtouchNoSymbolStrip>
-		<MtouchFastDev>true</MtouchFastDev>
+		<MtouchFastDev>false</MtouchFastDev>
 		<MtouchUseLlvm>false</MtouchUseLlvm>
 		<MtouchUseBitcode>false</MtouchUseBitcode>
-		<DevelopmentTeam>57JVV87HA6</DevelopmentTeam>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)'=='net9.0-ios'">
 	  <CodesignKey>Apple Development: Created via API (57JVV87HA6)</CodesignKey>
 	  <CodesignProvision>VS: com.companyname.photojobapp Development</CodesignProvision>
 	</PropertyGroup>
+
+
 
 
 
@@ -83,6 +84,7 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="7.0.1" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.7" />
+
 	</ItemGroup>
 
 </Project>

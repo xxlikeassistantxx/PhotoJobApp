@@ -18,9 +18,11 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-                    builder.Services.AddSingleton<PhotoJobService>();
-            builder.Services.AddSingleton<JobTypeService>();
-            builder.Services.AddSingleton<FirebaseAuthService>();
+        builder.Services.AddSingleton<FirebaseAuthService>();
+        
+        // Register services that need user context
+        builder.Services.AddTransient<PhotoJobService>();
+        builder.Services.AddTransient<JobTypeService>();
 
 #if DEBUG
         builder.Logging.AddDebug();
