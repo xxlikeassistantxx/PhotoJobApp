@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
@@ -24,7 +24,7 @@
 		<ApplicationTitle>PhotoJobApp</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.photojobapp</ApplicationId>
+		<ApplicationId>com.pinebelttrophy.photojobapp2025</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -41,21 +41,26 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		
 		<!-- iOS Code Signing and Provisioning -->
-		<CodesignKey>iPhone Developer</CodesignKey>
+		<CodesignKey>Apple Development</CodesignKey>
 		<CodesignProvision>Automatic</CodesignProvision>
 		<MtouchLink>None</MtouchLink>
 		<MtouchDebug>true</MtouchDebug>
 		<MtouchNoSymbolStrip>true</MtouchNoSymbolStrip>
-		<MtouchFastDev>true</MtouchFastDev>
+		<MtouchFastDev>false</MtouchFastDev>
 		<MtouchUseLlvm>false</MtouchUseLlvm>
 		<MtouchUseBitcode>false</MtouchUseBitcode>
-		<DevelopmentTeam>57JVV87HA6</DevelopmentTeam>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)'=='net9.0-ios'">
-	  <CodesignKey>Apple Development: Created via API (57JVV87HA6)</CodesignKey>
-	  <CodesignProvision>VS: com.companyname.photojobapp Development</CodesignProvision>
+  <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+	  <CodesignKey>Apple Development: Created via API (F697KPX6TL)</CodesignKey>
+	  <CodesignProvision>VS: com.pinebelttrophy.photojobapp2025 Development</CodesignProvision>
+	  <SkipStaticLibraryValidation>true</SkipStaticLibraryValidation>
+	  <DefineConstants>$(DefineConstants);USE_NATIVE_GOOGLE_SIGNIN</DefineConstants>
+	  <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
+
+
 
 
 
@@ -83,6 +88,73 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="7.0.1" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.7" />
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.0" />
 	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)'=='net9.0-ios'">
+		<PackageReference Include="Xamarin.Google.iOS.SignIn" Version="5.0.2.4" />
+		<BundleResource Include="Platforms\iOS\GoogleService-Info.plist">
+			<Link>GoogleService-Info.plist</Link>
+		</BundleResource>
+	</ItemGroup>
+
+	<Target Name="EnsurePkcsForHotRestart" Condition="'$(TargetFramework)'=='net9.0-ios'" AfterTargets="_PrepareHotRestartApp">
+		<PropertyGroup>
+			<PkcsAssemblyName>System.Security.Cryptography.Pkcs.dll</PkcsAssemblyName>
+			<PkcsOutputPath>$(OutputPath)$(PkcsAssemblyName)</PkcsOutputPath>
+			<PkcsSourcePath Condition="Exists('$(PkcsOutputPath)')">$(PkcsOutputPath)</PkcsSourcePath>
+			<PkcsPackageLib>$([System.IO.Path]::Combine('$(USERPROFILE)', '.nuget', 'packages', 'system.security.cryptography.pkcs', '8.0.0', 'lib'))</PkcsPackageLib>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<HotRestartBaseDir>$([System.IO.Path]::Combine($([System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::LocalApplicationData)), 'Xamarin', 'HotRestart'))</HotRestartBaseDir>
+			<HotRestartSigningAppBundleDir>$([System.IO.Path]::Combine('$(HotRestartBaseDir)', 'Signing', '$(AssemblyName).app'))</HotRestartSigningAppBundleDir>
+		</PropertyGroup>
+
+		<ItemGroup Condition="'$(PkcsSourcePath)'!=''">
+			<PkcsDestinations Include="$(HotRestartAppBundlePath)" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<PkcsDestinations Include="$(HotRestartAppBundlePath)out\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<PkcsDestinations Include="$(HotRestartAppBundlePath)out\Payload\$(AssemblyName).app\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<PkcsDestinations Include="$(HotRestartSignedAppOutputDir)" Condition="'$(HotRestartSignedAppOutputDir)'!=''" />
+			<PkcsDestinations Include="$(HotRestartSignedAppDir)" Condition="'$(HotRestartSignedAppDir)'!=''" />
+			<PkcsDestinations Include="$(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!=''" />
+			<PkcsDestinations Include="$(HotRestartSigningAppBundleDir)\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+			<PkcsDestinations Include="$(HotRestartSigningAppBundleDir)\out\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+			<PkcsDestinations Include="$(HotRestartSigningAppBundleDir)\out\Payload\$(AssemblyName).app\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+		</ItemGroup>
+
+		<Message Importance="High" Text="Ensuring System.Security.Cryptography.Pkcs for Hot Restart (IsHotRestartBuild=$(IsHotRestartBuild)) from: $(PkcsSourcePath)" Condition="'$(PkcsSourcePath)'!=''" />
+
+		<MakeDir Directories="@(PkcsDestinations)" Condition="'$(PkcsSourcePath)'!='' and @(PkcsDestinations-&gt;Count()) &gt; 0" />
+
+		<Copy SourceFiles="$(PkcsSourcePath)" DestinationFiles="@(PkcsDestinations-&gt;'%(Identity)$(PkcsAssemblyName)')" SkipUnchangedFiles="true" Condition="'$(PkcsSourcePath)'!='' and @(PkcsDestinations-&gt;Count()) &gt; 0" />
+
+		<Warning Text="EnsurePkcsForHotRestart: Unable to locate System.Security.Cryptography.Pkcs.dll source file." Condition="'$(PkcsSourcePath)'==''" />
+
+		<PropertyGroup>
+			<SystemRuntimeAssemblyName>System.Runtime.dll</SystemRuntimeAssemblyName>
+			<SystemRuntimeRefPackVersion Condition="'$(SystemRuntimeRefPackVersion)'==''">8.0.21</SystemRuntimeRefPackVersion>
+			<SystemRuntimeSourcePath Condition="Exists('$(OutputPath)$(SystemRuntimeAssemblyName)')">$(OutputPath)$(SystemRuntimeAssemblyName)</SystemRuntimeSourcePath>
+			<SystemRuntimeSourcePath Condition="'$(SystemRuntimeSourcePath)'=='' and Exists('$(IntermediateOutputPath)$(SystemRuntimeAssemblyName)')">$(IntermediateOutputPath)$(SystemRuntimeAssemblyName)</SystemRuntimeSourcePath>
+			<SystemRuntimePackagePath>$([System.IO.Path]::Combine('$(ProgramFiles)', 'dotnet', 'packs', 'Microsoft.NETCore.App.Ref', '$(SystemRuntimeRefPackVersion)', 'ref', 'net8.0', '$(SystemRuntimeAssemblyName)'))</SystemRuntimePackagePath>
+			<SystemRuntimeSourcePath Condition="'$(SystemRuntimeSourcePath)'=='' and Exists('$(SystemRuntimePackagePath)')">$(SystemRuntimePackagePath)</SystemRuntimeSourcePath>
+		</PropertyGroup>
+
+		<ItemGroup Condition="'$(SystemRuntimeSourcePath)'!=''">
+			<SystemRuntimeDestinations Include="$(HotRestartAppBundlePath)" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartAppBundlePath)out\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartAppBundlePath)out\Payload\$(AssemblyName).app\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartSignedAppOutputDir)" Condition="'$(HotRestartSignedAppOutputDir)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartSignedAppDir)" Condition="'$(HotRestartSignedAppDir)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartSigningAppBundleDir)\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartSigningAppBundleDir)\out\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+			<SystemRuntimeDestinations Include="$(HotRestartSigningAppBundleDir)\out\Payload\$(AssemblyName).app\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+		</ItemGroup>
+
+		<Copy SourceFiles="$(SystemRuntimeSourcePath)" DestinationFiles="@(SystemRuntimeDestinations-&gt;'%(Identity)$(SystemRuntimeAssemblyName)')" SkipUnchangedFiles="true" Condition="'$(SystemRuntimeSourcePath)'!='' and @(SystemRuntimeDestinations-&gt;Count()) &gt; 0" />
+
+		<Warning Text="EnsurePkcsForHotRestart: Unable to locate System.Runtime.dll source file." Condition="'$(SystemRuntimeSourcePath)'==''" />
+	</Target>
 
 </Project>

@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.JobAnalysisPage"
+             Title="Job Analysis">
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="20">
+            <!-- Header -->
+            <StackLayout Margin="0,20,0,20">
+                <Label Text="Job Statistical Analysis" 
+                       Style="{StaticResource Headline}"
+                       HorizontalOptions="Center"
+                       Margin="0,0,0,10"/>
+                <Label Text="View pricing summaries and filter by job type" 
+                       Style="{StaticResource BodyText}"
+                       HorizontalOptions="Center"
+                       TextColor="Gray"/>
+            </StackLayout>
+
+            <!-- Overall Statistics -->
+            <Frame Padding="20" CornerRadius="15" HasShadow="True" BackgroundColor="White">
+                <StackLayout Spacing="15">
+                    <Label Text="📊 Overall Statistics" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" Margin="0,10,0,0">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Total Jobs:" 
+                               Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding TotalJobs}" 
+                               Style="{StaticResource BodyText}" HorizontalOptions="End"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Total Revenue:" 
+                               Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding TotalRevenue}" 
+                               Style="{StaticResource BodyText}" HorizontalOptions="End" TextColor="Green"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="Average Job Value:" 
+                               Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding AverageJobValue}" 
+                               Style="{StaticResource BodyText}" HorizontalOptions="End" TextColor="Blue"/>
+                    </Grid>
+                </StackLayout>
+            </Frame>
+
+            <!-- Job Type Filter -->
+            <Frame Padding="20" CornerRadius="15" HasShadow="True" BackgroundColor="White">
+                <StackLayout Spacing="15">
+                    <Label Text="🔍 Filter by Job Type" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    
+                    <Label Text="Select job types to filter (toggle on/off)" 
+                           Style="{StaticResource BodyText}"
+                           TextColor="Gray"
+                           Margin="0,5,0,0"/>
+                    
+                    <CollectionView ItemsSource="{Binding JobTypeFilters}" 
+                                   HeightRequest="200"
+                                   Margin="0,10,0,0">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame Margin="2" Padding="10" CornerRadius="8" BackgroundColor="LightGray">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <CheckBox Grid.Column="0" 
+                                                  IsChecked="{Binding IsSelected}"
+                                                  CheckedChanged="OnJobTypeFilterChanged"
+                                                  VerticalOptions="Center"
+                                                  Margin="0,0,10,0"/>
+                                        <Label Grid.Column="1" 
+                                               Text="{Binding JobTypeName}" 
+                                               Style="{StaticResource BodyText}"
+                                               VerticalOptions="Center"/>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    
+                    <Button Text="Show Jobs" 
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            HeightRequest="40"
+                            CornerRadius="8"
+                            Clicked="OnShowAllJobsClicked"
+                            Margin="0,10,0,0"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Custom Field Search -->
+            <Frame Padding="20" CornerRadius="15" HasShadow="True" BackgroundColor="White">
+                <StackLayout Spacing="15">
+                    <Label Text="🔎 Search by Custom Field Values" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    
+                    <Label Text="Select job type, custom field, and search for specific values" 
+                           Style="{StaticResource BodyText}"
+                           TextColor="Gray"
+                           Margin="0,5,0,0"/>
+                    
+                    <!-- Job Type Selection -->
+                    <StackLayout Margin="0,10,0,0">
+                        <Label Text="Job Type:" 
+                               Style="{StaticResource BodyText}"
+                               FontAttributes="Bold"
+                               Margin="0,0,0,5"/>
+                        <Picker Title="Select Job Type"
+                                ItemsSource="{Binding JobTypeFilters}"
+                                ItemDisplayBinding="{Binding JobTypeName}"
+                                SelectedItem="{Binding SelectedJobTypeForSearch}"
+                                SelectedIndexChanged="OnJobTypeForSearchChanged"/>
+                    </StackLayout>
+                    
+                    <!-- Custom Field Selection -->
+                    <StackLayout IsVisible="{Binding HasCustomFieldsForSelectedJobType}" Margin="0,10,0,0">
+                        <Label Text="Custom Field:" 
+                               Style="{StaticResource BodyText}"
+                               FontAttributes="Bold"
+                               Margin="0,0,0,5"/>
+                        <Picker Title="Select Custom Field"
+                                ItemsSource="{Binding AvailableCustomFields}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedCustomField}"
+                                SelectedIndexChanged="OnCustomFieldSelectionChanged"/>
+                    </StackLayout>
+                    
+                    <!-- Search Value -->
+                    <StackLayout IsVisible="{Binding HasCustomFieldsForSelectedJobType}" Margin="0,10,0,0">
+                        <Label Text="Search Value:" 
+                               Style="{StaticResource BodyText}"
+                               FontAttributes="Bold"
+                               Margin="0,0,0,5"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Entry Grid.Column="0" 
+                                   Placeholder="Enter value to search for..."
+                                   Text="{Binding CustomFieldSearchValue}"
+                                   Completed="OnCustomFieldSearchCompleted"
+                                   Margin="0,0,10,0"/>
+                            <Button Grid.Column="1" 
+                                    Text="Search"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="White"
+                                    Clicked="OnCustomFieldSearchClicked"
+                                    WidthRequest="80"/>
+                        </Grid>
+                    </StackLayout>
+                    
+                    <!-- Search Results -->
+                    <StackLayout IsVisible="{Binding HasCustomFieldSearchResults}" Margin="0,15,0,0">
+                        <Label Text="Search Results" 
+                               Style="{StaticResource BodyText}"
+                               FontAttributes="Bold"
+                               Margin="0,0,0,10"/>
+                        
+                        <!-- Aggregated Statistics -->
+                        <Frame Padding="15" CornerRadius="10" BackgroundColor="LightBlue" Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
+                                <Label Grid.Row="0" Grid.Column="0" Text="Total Jobs Found:" 
+                                       Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding CustomFieldSearchCount}" 
+                                       Style="{StaticResource BodyText}" HorizontalOptions="End" TextColor="Blue"/>
+                                
+                                <Label Grid.Row="1" Grid.Column="0" Text="Total Revenue:" 
+                                       Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                                <Label Grid.Row="1" Grid.Column="1" Text="{Binding CustomFieldSearchRevenue}" 
+                                       Style="{StaticResource BodyText}" HorizontalOptions="End" TextColor="Green"/>
+                                
+                                <Label Grid.Row="2" Grid.Column="0" Text="Average Job Value:" 
+                                       Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                                <Label Grid.Row="2" Grid.Column="1" Text="{Binding CustomFieldSearchAverage}" 
+                                       Style="{StaticResource BodyText}" HorizontalOptions="End" TextColor="Purple"/>
+                            </Grid>
+                        </Frame>
+                        
+                        <!-- Individual Job Results -->
+                        <Label Text="Matching Jobs:" 
+                               Style="{StaticResource BodyText}"
+                               FontAttributes="Bold"
+                               Margin="0,0,0,5"/>
+                        
+                        <CollectionView ItemsSource="{Binding CustomFieldSearchResults}" 
+                                       HeightRequest="150">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Frame Margin="2" Padding="10" CornerRadius="8" BackgroundColor="LightGray">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <Label Grid.Column="0" 
+                                                   Text="{Binding JobTitle}" 
+                                                   Style="{StaticResource BodyText}"
+                                                   FontAttributes="Bold"/>
+                                            <Label Grid.Column="1" 
+                                                   Text="{Binding CustomFieldValue}" 
+                                                   Style="{StaticResource BodyText}"
+                                                   TextColor="Blue"
+                                                   Margin="10,0,0,0"/>
+                                            <Label Grid.Column="2" 
+                                                   Text="{Binding JobPrice, StringFormat='${0:N2}'}" 
+                                                   Style="{StaticResource BodyText}"
+                                                   TextColor="Green"
+                                                   HorizontalOptions="End"/>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </StackLayout>
+                </StackLayout>
+            </Frame>
+
+            <!-- Filtered Results -->
+            <Frame Padding="20" CornerRadius="15" HasShadow="True" BackgroundColor="White" 
+                   IsVisible="{Binding IsFiltered}">
+                <StackLayout Spacing="15">
+                    <Label Text="📈 Filtered Results" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" Margin="0,10,0,0">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Filtered Jobs:" 
+                               Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding FilteredJobCount}" 
+                               Style="{StaticResource BodyText}" HorizontalOptions="End"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="Filtered Revenue:" 
+                               Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding FilteredRevenue}" 
+                               Style="{StaticResource BodyText}" HorizontalOptions="End" TextColor="Green"/>
+                    </Grid>
+                </StackLayout>
+            </Frame>
+
+            <!-- Status Breakdown -->
+            <Frame Padding="20" CornerRadius="15" HasShadow="True" BackgroundColor="White">
+                <StackLayout Spacing="15">
+                    <Label Text="📋 Status Breakdown" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    
+                    <CollectionView ItemsSource="{Binding StatusBreakdown}" HeightRequest="200">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame Margin="5" Padding="15" CornerRadius="10" BackgroundColor="LightGray">
+                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                        <Label Grid.Column="0" Text="{Binding Status}" 
+                                               Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                                        <Label Grid.Column="1" Text="{Binding Count, StringFormat='{0} jobs'}" 
+                                               Style="{StaticResource BodyText}" Margin="10,0,0,0"/>
+                                        <Label Grid.Column="2" Text="{Binding Revenue}" 
+                                               Style="{StaticResource BodyText}" TextColor="Green" HorizontalOptions="End"/>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+            </Frame>
+
+            <!-- Job Type Analysis -->
+            <Frame Padding="20" CornerRadius="15" HasShadow="True" BackgroundColor="White">
+                <StackLayout Spacing="15">
+                    <Label Text="🎨 Job Type Analysis" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    
+                    <CollectionView ItemsSource="{Binding JobTypeBreakdown}" HeightRequest="200">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame Margin="5" Padding="15" CornerRadius="10" BackgroundColor="LightGray">
+                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                        <Label Grid.Column="0" Text="{Binding JobTypeName}" 
+                                               Style="{StaticResource BodyText}" FontAttributes="Bold"/>
+                                        <Label Grid.Column="1" Text="{Binding Count, StringFormat='{0} jobs'}" 
+                                               Style="{StaticResource BodyText}" Margin="10,0,0,0"/>
+                                        <Label Grid.Column="2" Text="{Binding Revenue}" 
+                                               Style="{StaticResource BodyText}" TextColor="Green" HorizontalOptions="End"/>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+            </Frame>
+
+            <!-- Refresh Button -->
+            <Button Text="🔄 Refresh Analysis" 
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    HeightRequest="50"
+                    CornerRadius="10"
+                    Clicked="OnRefreshClicked"
+                    Margin="0,20,0,0"/>
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage> 

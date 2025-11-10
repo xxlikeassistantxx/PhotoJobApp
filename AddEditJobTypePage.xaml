@@ -1,212 +1,135 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage x:Class="PhotoJobApp.AddEditJobTypePage"
-             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             Title="Job Type"
-             BackgroundColor="{StaticResource Gray100}">
+             x:Class="PhotoJobApp.AddEditJobTypePage"
+             xmlns:models="clr-namespace:PhotoJobApp.Models"
+             x:DataType="models:JobType"
+             Title="{Binding Id, StringFormat='Edit Job Type', TargetNullValue='New Job Type'}"
+             BackgroundColor="#F0F0F0">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="/Resources/Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <ScrollView>
-        <StackLayout Padding="20" Spacing="20">
-            <!-- Basic Information -->
-            <Frame Padding="15" CornerRadius="10" HasShadow="True">
-                <StackLayout Spacing="15">
-                    <Label Text="Basic Information" 
-                           FontSize="24"
-                           FontAttributes="Bold"/>
-                    
-                    <Label Text="Name *" FontSize="16"/>
-                    <Entry x:Name="NameEntry" 
-                           Text="{Binding Name}"
-                           Placeholder="Enter job type name"/>
-                    
-                    <Label Text="Description" FontSize="16"/>
-                    <Editor x:Name="DescriptionEditor" 
-                           Text="{Binding Description}"
-                           Placeholder="Enter description"
-                           HeightRequest="80"
-                           AutoSize="TextChanges"/>
-                    
-                    <Label Text="Icon" FontSize="16"/>
-                    <Entry x:Name="IconEntry" 
-                           Text="{Binding Icon}"
-                           Placeholder="📷"/>
-                    
-                    <Label Text="Color" FontSize="16"/>
-                    <Picker x:Name="ColorPicker" 
-                           Title="Select Color"
-                           SelectedIndexChanged="OnColorPickerChanged">
+        <StackLayout Padding="10" Spacing="10">
+
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Spacing="10">
+                    <Label Text="Basic Information" FontSize="18" FontAttributes="Bold"/>
+                    <Label Text="Name *"/>
+                    <Entry Text="{Binding Name}" Placeholder="e.g., Wedding Photography"/>
+                    <Label Text="Description"/>
+                    <Editor Text="{Binding Description}" Placeholder="A short description of this job type" HeightRequest="80" AutoSize="TextChanges"/>
+                    <Label Text="Icon"/>
+                    <Entry Text="{Binding Icon}" Placeholder="e.g., 📷"/>
+                    <Label Text="Color"/>
+                    <Picker Title="Select Color" SelectedItem="{Binding Color}">
                         <Picker.ItemsSource>
-                            <x:Array Type="x:Type x:String">
+                            <x:Array Type="{x:Type x:String}">
                                 <x:String>#FF6B6B</x:String>
                                 <x:String>#4ECDC4</x:String>
                                 <x:String>#45B7D1</x:String>
                                 <x:String>#96CEB4</x:String>
                                 <x:String>#FFEAA7</x:String>
                                 <x:String>#DDA0DD</x:String>
-                                <x:String>#98D8C8</x:String>
-                                <x:String>#F7DC6F</x:String>
                             </x:Array>
                         </Picker.ItemsSource>
                     </Picker>
                 </StackLayout>
             </Frame>
 
-            <!-- Features -->
-            <Frame Padding="15" CornerRadius="10" HasShadow="True">
-                <StackLayout Spacing="15">
-                    <Label Text="Features" 
-                           FontSize="24"
-                           FontAttributes="Bold"/>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasPhotosCheckBox" 
-                                 IsChecked="{Binding HasPhotos}"/>
-                        <Label Text="Include Photos" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasLocationCheckBox" 
-                                 IsChecked="{Binding HasLocation}"/>
-                        <Label Text="Include Location" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasClientInfoCheckBox" 
-                                 IsChecked="{Binding HasClientInfo}"/>
-                        <Label Text="Include Client Information" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasPricingCheckBox" 
-                                 IsChecked="{Binding HasPricing}"/>
-                        <Label Text="Include Pricing" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasDueDateCheckBox" 
-                                 IsChecked="{Binding HasDueDate}"/>
-                        <Label Text="Include Due Date" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasStatusCheckBox" 
-                                 IsChecked="{Binding HasStatus}"/>
-                        <Label Text="Include Status" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasNotesCheckBox" 
-                                 IsChecked="{Binding HasNotes}"/>
-                        <Label Text="Include Notes" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                    
-                    <StackLayout Orientation="Horizontal">
-                        <CheckBox x:Name="HasUrgentFlagCheckBox" 
-                                 IsChecked="{Binding HasUrgentFlag}"/>
-                        <Label Text="Include Urgent Flag" 
-                               FontSize="16"
-                               VerticalOptions="Center"/>
-                    </StackLayout>
-                </StackLayout>
-            </Frame>
-
-            <!-- Status Options -->
-            <Frame Padding="15" CornerRadius="10" HasShadow="True">
-                <StackLayout Spacing="15">
-                    <Label Text="Status Options" 
-                           FontSize="24"
-                           FontAttributes="Bold"/>
-                    
-                    <Label Text="Status Options (comma-separated)" FontSize="16"/>
-                    <Editor x:Name="StatusOptionsEditor" 
-                           Text="{Binding StatusOptions}"
-                           Placeholder="Pending,In Progress,Completed,Cancelled"
-                           HeightRequest="60"
-                           AutoSize="TextChanges"/>
-                </StackLayout>
-            </Frame>
-
-            <!-- Custom Fields -->
-            <Frame Padding="15" CornerRadius="10" HasShadow="True">
-                <StackLayout Spacing="15">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Grid.Column="0" 
-                               Text="Custom Fields" 
-                               FontSize="24"
-                               FontAttributes="Bold"/>
-                        <Button Grid.Column="1" 
-                                Text="Add Field" 
-                                BackgroundColor="#512BD4"
-                                TextColor="White"
-                                Clicked="OnAddCustomFieldClicked"/>
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Spacing="10">
+                    <Label Text="Enabled Features" FontSize="18" FontAttributes="Bold"/>
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="5">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Include Photos" VerticalOptions="Center"/>
+                        <Switch Grid.Row="0" Grid.Column="1" IsToggled="{Binding HasPhotos}" OnColor="#512BD4"/>
+                        <Label Grid.Row="1" Grid.Column="0" Text="Include Location" VerticalOptions="Center"/>
+                        <Switch Grid.Row="1" Grid.Column="1" IsToggled="{Binding HasLocation}" OnColor="#512BD4"/>
+                        <Label Grid.Row="2" Grid.Column="0" Text="Include Client Information" VerticalOptions="Center"/>
+                        <Switch Grid.Row="2" Grid.Column="1" IsToggled="{Binding HasClientInfo}" OnColor="#512BD4"/>
+                        <Label Grid.Row="3" Grid.Column="0" Text="Include Pricing" VerticalOptions="Center"/>
+                        <Switch Grid.Row="3" Grid.Column="1" IsToggled="{Binding HasPricing}" OnColor="#512BD4"/>
+                        <Label Grid.Row="4" Grid.Column="0" Text="Include Due Date" VerticalOptions="Center"/>
+                        <Switch Grid.Row="4" Grid.Column="1" IsToggled="{Binding HasDueDate}" OnColor="#512BD4"/>
+                        <Label Grid.Row="5" Grid.Column="0" Text="Include Status" VerticalOptions="Center"/>
+                        <Switch Grid.Row="5" Grid.Column="1" IsToggled="{Binding HasStatus}" OnColor="#512BD4"/>
+                        <Label Grid.Row="6" Grid.Column="0" Text="Include Notes" VerticalOptions="Center"/>
+                        <Switch Grid.Row="6" Grid.Column="1" IsToggled="{Binding HasNotes}" OnColor="#512BD4"/>
+                        <Label Grid.Row="7" Grid.Column="0" Text="Include Urgent Flag" VerticalOptions="Center"/>
+                        <Switch Grid.Row="7" Grid.Column="1" IsToggled="{Binding HasUrgentFlag}" OnColor="#512BD4"/>
                     </Grid>
-                    
-                    <CollectionView x:Name="CustomFieldsCollectionView" 
-                                   ItemsSource="{Binding CustomFieldsList}"
-                                   HeightRequest="200">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate>
-                                <Frame Margin="0,5" Padding="10" CornerRadius="5" HasShadow="True">
-                                    <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
-                                        <Label Grid.Row="0" Grid.Column="0"
-                                               Text="{Binding Name}" 
-                                               FontSize="16"
-                                               FontAttributes="Bold"/>
-                                        <Button Grid.Row="0" Grid.Column="1"
-                                                Text="🗑️" 
-                                                FontSize="12"
-                                                WidthRequest="30"
-                                                HeightRequest="30"
-                                                CornerRadius="15"
-                                                BackgroundColor="Transparent"
-                                                Clicked="OnDeleteCustomFieldClicked"
-                                                CommandParameter="{Binding .}"/>
-                                        
-                                        <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                               Text="{Binding Type, StringFormat='Type: {0}'}" 
-                                               FontSize="12"
-                                               TextColor="Gray"/>
-                                        
-                                        <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
-                                               Text="{Binding Required, StringFormat='Required: {0}'}" 
-                                               FontSize="12"
-                                               TextColor="Gray"/>
-                                    </Grid>
-                                </Frame>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
                 </StackLayout>
             </Frame>
 
-            <!-- Action Buttons -->
-            <StackLayout Orientation="Horizontal" Spacing="10">
-                <Button Text="Cancel" 
-                       BackgroundColor="Gray"
-                       TextColor="White"
-                       HorizontalOptions="FillAndExpand"
-                       Clicked="OnCancelClicked"/>
-                <Button Text="Save" 
-                       BackgroundColor="#512BD4"
-                       TextColor="White"
-                       HorizontalOptions="FillAndExpand"
-                       Clicked="OnSaveClicked"/>
-            </StackLayout>
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Spacing="10">
+                    <Label Text="Status Options" FontSize="18" FontAttributes="Bold"/>
+                    <Label Text="Enter status options separated by commas." FontSize="12" TextColor="#666666"/>
+                    <Editor Text="{Binding StatusOptions}" Placeholder="e.g., Pending, In Progress, Completed" HeightRequest="60" AutoSize="TextChanges"/>
+                </StackLayout>
+            </Frame>
+
+            <CollectionView ItemsSource="{Binding CustomFieldsList}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:CustomField">
+                        <Frame Margin="0,5" Padding="10" CornerRadius="5">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold"/>
+                                    <Label FontSize="12" TextColor="#666666">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Type, StringFormat='Type: {0}'}"/>
+                                                <Span Text=" | "/>
+                                                <Span Text="{Binding Required, StringFormat='Required: {0}'}"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                </StackLayout>
+                                <Button Grid.Column="1" Text="🗑️" BackgroundColor="Transparent" TextColor="Red" Clicked="OnDeleteCustomFieldClicked" CommandParameter="{Binding .}"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Add Custom Field Button -->
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Spacing="10">
+                    <Label Text="Custom Fields" FontSize="18" FontAttributes="Bold"/>
+                    <Button Text="+ Add Custom Field" 
+                            Clicked="OnAddCustomFieldClicked"
+                            BackgroundColor="#512BD4"
+                            TextColor="White"
+                            CornerRadius="5"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Save and Cancel Buttons -->
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Spacing="15">
+                    <Button Text="Save" 
+                            Clicked="OnSaveClicked"
+                            BackgroundColor="#512BD4"
+                            TextColor="White"
+                            WidthRequest="120"
+                            CornerRadius="5"/>
+                    <Button Text="Cancel" 
+                            Clicked="OnCancelClicked"
+                            BackgroundColor="Gray"
+                            TextColor="White"
+                            WidthRequest="120"
+                            CornerRadius="5"/>
+                </StackLayout>
+            </Frame>
+
         </StackLayout>
     </ScrollView>
-
 </ContentPage> 

@@ -12,11 +12,34 @@ namespace PhotoJobApp
 
         public MainPage()
         {
-            InitializeComponent();
-            _photoJobService = new PhotoJobService();
-            Jobs = new ObservableCollection<PhotoJob>();
-            BindingContext = this;
-            LoadJobsAsync();
+            System.Diagnostics.Debug.WriteLine("MainPage constructor called");
+            Console.WriteLine("MainPage constructor called");
+            
+            try
+            {
+                InitializeComponent();
+                System.Diagnostics.Debug.WriteLine("MainPage InitializeComponent completed");
+                Console.WriteLine("MainPage InitializeComponent completed");
+                
+                _photoJobService = new PhotoJobService();
+                Jobs = new ObservableCollection<PhotoJob>();
+                BindingContext = this;
+                
+                System.Diagnostics.Debug.WriteLine("MainPage basic setup completed");
+                Console.WriteLine("MainPage basic setup completed");
+                
+                LoadJobsAsync();
+                
+                System.Diagnostics.Debug.WriteLine("MainPage constructor completed");
+                Console.WriteLine("MainPage constructor completed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in MainPage constructor: {ex.Message}");
+                Console.WriteLine($"Error in MainPage constructor: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
         }
 
         protected override void OnAppearing()
@@ -29,37 +52,54 @@ namespace PhotoJobApp
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("LoadJobsAsync called");
+                Console.WriteLine("LoadJobsAsync called");
+                
+                if (_photoJobService == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("_photoJobService is null, skipping database load");
+                    Console.WriteLine("_photoJobService is null, skipping database load");
+                    return;
+                }
+                
                 System.Diagnostics.Debug.WriteLine("Loading jobs from database...");
+                Console.WriteLine("Loading jobs from database...");
+                
                 var jobs = await _photoJobService.GetJobsAsync();
                 System.Diagnostics.Debug.WriteLine($"Loaded {jobs.Count} jobs from database");
+                Console.WriteLine($"Loaded {jobs.Count} jobs from database");
                 
                 Jobs.Clear();
                 foreach (var job in jobs)
                 {
                     System.Diagnostics.Debug.WriteLine($"Adding job: {job.Title} (Created: {job.CreatedDate})");
+                    Console.WriteLine($"Adding job: {job.Title} (Created: {job.CreatedDate})");
                     Jobs.Add(job);
                 }
                 
                 System.Diagnostics.Debug.WriteLine($"Total jobs in collection: {Jobs.Count}");
+                Console.WriteLine($"Total jobs in collection: {Jobs.Count}");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading jobs: {ex.Message}");
+                Console.WriteLine($"Error loading jobs: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 await DisplayAlert("Error", $"Failed to load jobs: {ex.Message}", "OK");
             }
         }
 
         private async void OnAddJobClicked(object sender, EventArgs e)
         {
-            await Navigation.PushAsync(new AddEditJobPage());
+            await Shell.Current.GoToAsync("AddEditJobPage");
         }
 
         private async void OnJobTapped(object sender, TappedEventArgs e)
         {
             if (e.Parameter is PhotoJob job)
             {
-                await Navigation.PushAsync(new JobDetailPage(job));
+                await Shell.Current.GoToAsync($"JobDetailPage?Job={job.Id}");
             }
         }
 
@@ -72,7 +112,7 @@ namespace PhotoJobApp
                 switch (action)
                 {
                     case "Edit":
-                        await Navigation.PushAsync(new AddEditJobPage(job));
+                        await Shell.Current.GoToAsync($"AddEditJobPage?Job={job.Id}");
                         break;
                     case "Delete":
                         await DeleteJobAsync(job);
@@ -172,7 +212,34 @@ namespace PhotoJobApp
 
         private async void OnJobTypesClicked(object sender, EventArgs e)
         {
-            await Navigation.PushAsync(new JobTypeManagementPage());
+            await Shell.Current.GoToAsync("JobTypeManagementPage");
+        }
+
+        private async void OnCloudManagementClicked(object sender, EventArgs e)
+        {
+            await Shell.Current.GoToAsync("//CloudManagementPage");
+        }
+
+        private async void OnAccountClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                // Get FirebaseAuthService from DI
+                var authService = Application.Current?.Handler?.MauiContext?.Services.GetService<FirebaseAuthService>();
+                if (authService == null)
+                {
+                    authService = new FirebaseAuthService();
+                }
+                
+                var accountPage = new AccountPage(authService);
+                await Navigation.PushAsync(accountPage);
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"Failed to open account page: {ex.Message}", "OK");
+                System.Diagnostics.Debug.WriteLine($"Error navigating to AccountPage: {ex.Message}");
+                Console.WriteLine($"Error navigating to AccountPage: {ex.Message}");
+            }
         }
     }
 }

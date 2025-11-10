@@ -7,12 +7,13 @@
     <Grid RowDefinitions="Auto,*,Auto">
         <!-- Header -->
         <Grid Grid.Row="0" Padding="20,10" BackgroundColor="{StaticResource Primary}">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto">
                 <Label Grid.Column="0" 
-                       Text="Photo Job Manager" 
+                       Text="" 
                        Style="{StaticResource Headline}" 
                        TextColor="White"
-                       VerticalOptions="Center"/>
+                       VerticalOptions="Center"
+                       IsVisible="False"/>
                 <Button Grid.Column="1" 
                         Text="🔍" 
                         FontSize="16"
@@ -44,6 +45,26 @@
                         Margin="5,0"
                         Clicked="OnJobTypesClicked"/>
                 <Button Grid.Column="4" 
+                        Text="☁️" 
+                        FontSize="16"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        CornerRadius="20"
+                        BackgroundColor="White"
+                        TextColor="{StaticResource Primary}"
+                        Margin="5,0"
+                        Clicked="OnCloudManagementClicked"/>
+                <Button Grid.Column="5" 
+                        Text="👤" 
+                        FontSize="16"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        CornerRadius="20"
+                        BackgroundColor="White"
+                        TextColor="{StaticResource Primary}"
+                        Margin="5,0"
+                        Clicked="OnAccountClicked"/>
+                <Button Grid.Column="6" 
                         Text="+" 
                         FontSize="24"
                         WidthRequest="50"
@@ -112,7 +133,8 @@
         <Grid Grid.Row="2" Padding="20,10" BackgroundColor="LightGray">
             <Label Text="{Binding Jobs.Count, StringFormat='{0} jobs total'}" 
                    Style="{StaticResource CaptionText}"
-                   HorizontalOptions="Center"/>
+                   HorizontalOptions="Start"
+                   VerticalOptions="Center"/>
         </Grid>
     </Grid>
 

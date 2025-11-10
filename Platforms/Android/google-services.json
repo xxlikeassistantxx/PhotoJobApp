@@ -1,0 +1,91 @@
+{
+  "project_info": {
+    "project_number": "1021759232753",
+    "firebase_url": "https://photo-job-manager-default-rtdb.firebaseio.com",
+    "project_id": "photo-job-manager",
+    "storage_bucket": "photo-job-manager.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1021759232753:android:521bdc113e37c842eae750",
+        "android_client_info": {
+          "package_name": "com.company.photomanagerapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1021759232753-glcofi4hpt6i0jjis09t7te3lu1enk6f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfA8aG8FZQwddu7ikKta-PKqWyimW-uxQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1021759232753-glcofi4hpt6i0jjis09t7te3lu1enk6f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pinebelttrophy.photojobapp2025"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1021759232753:android:b3183f637c8a75bceae750",
+        "android_client_info": {
+          "package_name": "com.pinebelttrophy.photojobapp2025"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1021759232753-qthm6ln3fsrb1k86h3rv1baq48c3org2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pinebelttrophy.photojobapp2025",
+            "certificate_hash": "6aefbbe173c42dfe519fb7f40f84ba9cea4be409"
+          }
+        },
+        {
+          "client_id": "1021759232753-glcofi4hpt6i0jjis09t7te3lu1enk6f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfA8aG8FZQwddu7ikKta-PKqWyimW-uxQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1021759232753-glcofi4hpt6i0jjis09t7te3lu1enk6f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pinebelttrophy.photojobapp2025"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

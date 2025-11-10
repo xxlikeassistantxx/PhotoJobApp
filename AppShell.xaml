@@ -4,10 +4,11 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:PhotoJobApp"
-    Title="PhotoJobApp">
+    Title="Photo Job Manager">
 
     <Shell.MenuBarItems>
         <MenuBarItem Text="Account">
+            <MenuFlyoutItem Text="View Logs" Clicked="OnViewLogsClicked" />
             <MenuFlyoutItem Text="Sign Out" Clicked="OnSignOutClicked" />
         </MenuBarItem>
     </Shell.MenuBarItems>
@@ -16,5 +17,10 @@
         Title="Home"
         ContentTemplate="{DataTemplate local:MainPage}"
         Route="MainPage" />
+
+    <ShellContent
+        Title="☁️ Cloud Management"
+        ContentTemplate="{DataTemplate local:CloudManagementPage}"
+        Route="CloudManagementPage" />
 
 </Shell>

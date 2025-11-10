@@ -1,0 +1,63 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with rounded corners -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a7c59;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d5a3d;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="trophyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5f5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#e0e0e0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c0c0c0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded rectangle background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="180" ry="180" fill="url(#bgGradient)"/>
+  <!-- Version marker for icon refresh -->
+  <circle cx="50" cy="50" r="8" fill="#ffffff" opacity="0.05"/>
+  
+  <!-- Camera aperture circle -->
+  <circle cx="512" cy="512" r="280" fill="#2c2c2c" stroke="#ffffff" stroke-width="12"/>
+  
+  <!-- Aperture blades -->
+  <g transform="translate(512,512)">
+    <!-- Blade 1 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(0)"/>
+    <!-- Blade 2 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(45)"/>
+    <!-- Blade 3 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(90)"/>
+    <!-- Blade 4 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(135)"/>
+    <!-- Blade 5 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(180)"/>
+    <!-- Blade 6 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(225)"/>
+    <!-- Blade 7 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(270)"/>
+    <!-- Blade 8 -->
+    <path d="M 0,-200 L 60,-120 L 0,-40 L -60,-120 Z" fill="#ffffff" transform="rotate(315)"/>
+  </g>
+  
+  <!-- Trophy in center -->
+  <g transform="translate(512,512)">
+    <!-- Trophy cup -->
+    <path d="M -80,-40 L -80,40 Q -80,60 -60,60 L 60,60 Q 80,60 80,40 L 80,-40 Q 80,-60 60,-60 L -60,-60 Q -80,-60 -80,-40 Z" fill="url(#trophyGradient)" stroke="#4a7c59" stroke-width="3"/>
+    
+    <!-- Trophy handles -->
+    <ellipse cx="-90" cy="0" rx="15" ry="25" fill="url(#trophyGradient)" stroke="#4a7c59" stroke-width="3"/>
+    <ellipse cx="90" cy="0" rx="15" ry="25" fill="url(#trophyGradient)" stroke="#4a7c59" stroke-width="3"/>
+    
+    <!-- Trophy base -->
+    <rect x="-60" y="60" width="120" height="20" fill="url(#trophyGradient)" stroke="#4a7c59" stroke-width="3"/>
+    <rect x="-40" y="80" width="80" height="15" fill="url(#trophyGradient)" stroke="#4a7c59" stroke-width="3"/>
+    
+    <!-- Pine tree symbol -->
+    <g transform="translate(0,-10)">
+      <polygon points="0,-25 -15,-5 15,-5" fill="#4a7c59"/>
+      <polygon points="0,-15 -20,5 20,5" fill="#4a7c59"/>
+      <rect x="-3" y="5" width="6" height="15" fill="#8b4513"/>
+    </g>
+  </g>
+</svg>

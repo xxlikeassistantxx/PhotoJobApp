@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.PhotoGalleryPage"
+             Title="Photo Gallery"
+             BackgroundColor="Black">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Grid Grid.Row="0" 
+              BackgroundColor="Black" 
+              Padding="10"
+              ColumnDefinitions="Auto,*,Auto">
+            
+            <Button Grid.Column="0" 
+                    Text="← Back" 
+                    TextColor="White"
+                    BackgroundColor="Transparent"
+                    BorderColor="Transparent"
+                    Clicked="OnBackClicked"/>
+            
+            <Label Grid.Column="1" 
+                   Text="{Binding CurrentPhotoIndex, StringFormat='{0} of {1}'}" 
+                   TextColor="White"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   FontSize="16"/>
+            
+            <Button Grid.Column="2" 
+                    Text="×" 
+                    TextColor="White"
+                    BackgroundColor="Transparent"
+                    BorderColor="Transparent"
+                    FontSize="24"
+                    Clicked="OnCloseClicked"/>
+        </Grid>
+
+        <!-- Photo Carousel -->
+        <CarouselView Grid.Row="1" 
+                      x:Name="PhotoCarousel"
+                      ItemsSource="{Binding PhotoList}"
+                      CurrentItemChanged="OnCurrentItemChanged"
+                      IndicatorView="{x:Reference PhotoIndicator}">
+            <CarouselView.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Image Source="{Binding}" 
+                               Aspect="AspectFit"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               MaximumWidthRequest="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=Width}"
+                               MaximumHeightRequest="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=Height}"/>
+                        
+                        <!-- Tap to zoom functionality -->
+                        <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnPhotoTapped"/>
+                        </Grid.GestureRecognizers>
+                    </Grid>
+                </DataTemplate>
+            </CarouselView.ItemTemplate>
+        </CarouselView>
+
+        <!-- Photo Indicator -->
+        <IndicatorView Grid.Row="2" 
+                       x:Name="PhotoIndicator"
+                       IndicatorColor="Gray"
+                       SelectedIndicatorColor="White"
+                       HorizontalOptions="Center"
+                       Margin="0,10,0,20"/>
+
+        <!-- Navigation Buttons (for larger screens) -->
+        <Button Grid.Row="1" 
+                Grid.Column="0"
+                Text="‹" 
+                TextColor="White"
+                BackgroundColor="Transparent"
+                BorderColor="Transparent"
+                FontSize="32"
+                HorizontalOptions="Start"
+                VerticalOptions="Center"
+                Margin="10,0,0,0"
+                IsVisible="{Binding ShowNavigationButtons}"
+                Clicked="OnPreviousPhotoClicked"/>
+        
+        <Button Grid.Row="1" 
+                Grid.Column="2"
+                Text="›" 
+                TextColor="White"
+                BackgroundColor="Transparent"
+                BorderColor="Transparent"
+                FontSize="32"
+                HorizontalOptions="End"
+                VerticalOptions="Center"
+                Margin="0,0,10,0"
+                IsVisible="{Binding ShowNavigationButtons}"
+                Clicked="OnNextPhotoClicked"/>
+    </Grid>
+
+</ContentPage> 

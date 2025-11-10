@@ -1,115 +1,44 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage x:Class="PhotoJobApp.JobTypeManagementPage"
-             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.JobTypeManagementPage"
+             xmlns:models="clr-namespace:PhotoJobApp.Models"
+             xmlns:local="clr-namespace:PhotoJobApp"
+             x:DataType="local:JobTypeManagementPage"
              Title="Job Types"
-             BackgroundColor="{StaticResource Gray100}">
+             BackgroundColor="#F0F0F0">
 
-    <Grid RowDefinitions="Auto,*,Auto">
-        <!-- Header -->
-        <Grid Grid.Row="0" 
-              BackgroundColor="{StaticResource Primary}" 
-              Padding="20,10">
-            <Grid ColumnDefinitions="*,Auto">
-                <Label Grid.Column="0" 
-                       Text="Job Types" 
-                       Style="{StaticResource Headline}" 
-                       TextColor="White"
-                       VerticalOptions="Center"/>
-                <Button Grid.Column="1" 
-                        Text="+" 
-                        FontSize="24"
-                        WidthRequest="50"
-                        HeightRequest="50"
-                        CornerRadius="25"
-                        BackgroundColor="White"
-                        TextColor="{StaticResource Primary}"
-                        Clicked="OnAddJobTypeClicked"/>
+    <Grid RowDefinitions="Auto,*">
+        
+        <Frame Grid.Row="0" Padding="15" Margin="10" CornerRadius="10" BackgroundColor="#512BD4">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                <Label Grid.Column="0" Text="Job Type Templates" FontSize="22" FontAttributes="Bold" TextColor="White" VerticalOptions="Center"/>
+                <Button Grid.Column="1" Text="☁️ Pull" Clicked="OnPullFromCloudClicked" BackgroundColor="Transparent" TextColor="White" CornerRadius="20" Padding="10,5" Margin="0,0,5,0"/>
+                <Button Grid.Column="2" Text="🔄 Sync" Clicked="OnSyncClicked" BackgroundColor="Transparent" TextColor="White" CornerRadius="20" Padding="10,5" Margin="0,0,5,0"/>
+                <Button Grid.Column="3" Text="+ New" Clicked="OnAddJobTypeClicked" BackgroundColor="White" TextColor="#512BD4" CornerRadius="20" Padding="15,5"/>
             </Grid>
-        </Grid>
+        </Frame>
 
-        <!-- Job Types List -->
         <CollectionView Grid.Row="1" 
-                       x:Name="JobTypesCollectionView" 
-                       ItemsSource="{Binding JobTypes}"
-                       Margin="20">
+                        ItemsSource="{Binding JobTypes}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnJobTypeTapped">
             <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Frame Margin="0,5" Padding="15" CornerRadius="10" HasShadow="True">
-                        <Frame.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnJobTypeTapped" CommandParameter="{Binding .}"/>
-                        </Frame.GestureRecognizers>
-                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto">
-                            <!-- Icon and Name -->
-                            <Label Grid.Row="0" Grid.Column="0"
-                                   Text="{Binding Icon}" 
-                                   FontSize="24"
-                                   VerticalOptions="Center"
-                                   Margin="0,0,10,0"/>
-                            <Label Grid.Row="0" Grid.Column="1"
-                                   Text="{Binding Name}" 
-                                   Style="{StaticResource SubHeadline}"
-                                   FontAttributes="Bold"/>
-                            <StackLayout Grid.Row="0" Grid.Column="2" 
-                                       Orientation="Horizontal">
-                                <Button Text="✏️" 
-                                       FontSize="12"
-                                       WidthRequest="30"
-                                       HeightRequest="30"
-                                       CornerRadius="15"
-                                       BackgroundColor="Transparent"
-                                       Clicked="OnEditJobTypeClicked"
-                                       CommandParameter="{Binding .}"/>
-                                <Button Text="🗑️" 
-                                       FontSize="12"
-                                       WidthRequest="30"
-                                       HeightRequest="30"
-                                       CornerRadius="15"
-                                       BackgroundColor="Transparent"
-                                       Clicked="OnDeleteJobTypeClicked"
-                                       CommandParameter="{Binding .}"/>
+                <DataTemplate x:DataType="models:JobType">
+                    <Frame Margin="10,5" Padding="15" CornerRadius="8" BorderColor="#E0E0E0" BackgroundColor="White">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                            <Label Grid.Column="0" Text="{Binding Icon}" FontSize="30" VerticalOptions="Center"/>
+                            <StackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="17"/>
+                                <Label Text="{Binding Description}" FontSize="13" TextColor="#666666"/>
                             </StackLayout>
-                            
-                            <!-- Description -->
-                            <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                                   Text="{Binding Description}" 
-                                   Style="{StaticResource BodyText}"
-                                   MaxLines="2"
-                                   Margin="0,5,0,0"/>
-                            
-                            <!-- Features and Date -->
-                            <StackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" 
-                                       Orientation="Horizontal" 
-                                       Margin="0,10,0,0">
-                                <Label Text="{Binding FormattedCreatedDate}" 
-                                       Style="{StaticResource CaptionText}"
-                                       TextColor="Gray"/>
-                                <Label Text=" • " 
-                                       Style="{StaticResource CaptionText}"
-                                       TextColor="Gray"/>
-                                <Label Text="{Binding CustomFieldsList.Count, StringFormat='{0} custom fields'}" 
-                                       Style="{StaticResource CaptionText}"
-                                       TextColor="Gray"/>
-                            </StackLayout>
-                            
-                            <!-- Status Options Count -->
-                            <Label Grid.Row="2" Grid.Column="2"
-                                   Text="{Binding StatusList.Count, StringFormat='{0} statuses'}" 
-                                   Style="{StaticResource CaptionText}"
-                                   TextColor="Gray"
-                                   HorizontalOptions="End"/>
+                            <Image Grid.Column="2" Source="chevron_right.png" HeightRequest="18" Opacity="0.5" VerticalOptions="Center"/>
                         </Grid>
                     </Frame>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- Status Bar -->
-        <Grid Grid.Row="2" Padding="20,10" BackgroundColor="LightGray">
-            <Label Text="{Binding JobTypes.Count, StringFormat='{0} job types'}" 
-                   Style="{StaticResource CaptionText}"
-                   HorizontalOptions="Center"/>
-        </Grid>
     </Grid>
 
 </ContentPage> 

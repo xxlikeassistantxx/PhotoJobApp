@@ -1,6 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true"></application>
+	<application 
+		android:allowBackup="true" 
+		android:supportsRtl="true"
+		android:label="Photo Job Manager"
+		android:theme="@style/Maui.MainTheme">
+	</application>
+	
+	<!-- Network Permissions -->
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
+	
+	<!-- Camera and Storage Permissions -->
+	<uses-permission android:name="android.permission.CAMERA" />
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+	
+	<!-- Camera Feature -->
+	<uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>
