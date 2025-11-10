@@ -29,29 +29,15 @@
                     <Label Text="Icon"/>
                     <Entry Text="{Binding Icon}" Placeholder="e.g., 📷"/>
                     <Label Text="Color"/>
-                    <Picker x:Name="ColorPicker" Title="Select Color" SelectedItem="{Binding Color}">
+                    <Picker Title="Select Color" SelectedItem="{Binding Color}">
                         <Picker.ItemsSource>
                             <x:Array Type="{x:Type x:String}">
-                                <x:String>Purple</x:String>
-                                <x:String>Blue</x:String>
-                                <x:String>Teal</x:String>
-                                <x:String>Green</x:String>
-                                <x:String>Lime</x:String>
-                                <x:String>Yellow</x:String>
-                                <x:String>Orange</x:String>
-                                <x:String>Red</x:String>
-                                <x:String>Pink</x:String>
-                                <x:String>Magenta</x:String>
-                                <x:String>Indigo</x:String>
-                                <x:String>Cyan</x:String>
-                                <x:String>Emerald</x:String>
-                                <x:String>Amber</x:String>
-                                <x:String>Deep Orange</x:String>
-                                <x:String>Light Blue</x:String>
-                                <x:String>Light Green</x:String>
-                                <x:String>Deep Purple</x:String>
-                                <x:String>Brown</x:String>
-                                <x:String>Gray</x:String>
+                                <x:String>#FF6B6B</x:String>
+                                <x:String>#4ECDC4</x:String>
+                                <x:String>#45B7D1</x:String>
+                                <x:String>#96CEB4</x:String>
+                                <x:String>#FFEAA7</x:String>
+                                <x:String>#DDA0DD</x:String>
                             </x:Array>
                         </Picker.ItemsSource>
                     </Picker>

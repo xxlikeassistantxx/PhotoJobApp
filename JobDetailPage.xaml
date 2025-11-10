@@ -128,13 +128,13 @@
                                 <Frame Margin="5" Padding="5" CornerRadius="5" BackgroundColor="LightGray">
                                     <Grid>
                                         <Image Source="{Binding}" HeightRequest="80" Aspect="AspectFill"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPhotoTapped"/>
+                                    </Grid.GestureRecognizers>
                                         <!-- Overlay to indicate it's clickable -->
                                         <BoxView BackgroundColor="Transparent" 
                                                  Opacity="0.1"
                                                  IsVisible="False"/>
-                                        <Grid.GestureRecognizers>
-                                            <TapGestureRecognizer Tapped="OnPhotoTapped"/>
-                                        </Grid.GestureRecognizers>
                                     </Grid>
                                 </Frame>
                             </DataTemplate>
@@ -145,21 +145,6 @@
                     <Label Text="{Binding PhotoList.Count, StringFormat='{0} photo(s)'}" 
                            TextColor="Gray"
                            FontSize="12"
-                           HorizontalOptions="Center"
-                           Margin="0,5,0,0"/>
-                </StackLayout>
-            </Frame>
-
-            <!-- No Photos Message -->
-            <Frame Padding="15" CornerRadius="10" HasShadow="True" IsVisible="{Binding PhotoList.Count, Converter={StaticResource IntToBoolInvertedConverter}}">
-                <StackLayout>
-                    <Label Text="No Photos" 
-                           Style="{StaticResource SubHeadline}"
-                           FontAttributes="Bold"
-                           HorizontalOptions="Center"/>
-                    <Label Text="This job doesn't have any photos yet." 
-                           Style="{StaticResource BodyText}"
-                           TextColor="Gray"
                            HorizontalOptions="Center"
                            Margin="0,5,0,0"/>
                 </StackLayout>

@@ -67,11 +67,12 @@ namespace PhotoJobApp.Services
             }
         }
 
-        private async Task AddDefaultJobTypesAsync()
+        private Task AddDefaultJobTypesAsync()
         {
             // No default job types - users will create their own
             System.Diagnostics.Debug.WriteLine("JobTypeService: No default job types added - users will create their own");
             Console.WriteLine("JobTypeService: No default job types added - users will create their own");
+            return Task.CompletedTask;
         }
 
         public async Task<List<JobType>> GetJobTypesAsync()

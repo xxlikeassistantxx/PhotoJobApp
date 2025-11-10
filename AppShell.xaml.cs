@@ -35,6 +35,22 @@ public partial class AppShell : Shell
 		Routing.RegisterRoute("JobTypeDetailPage", typeof(JobTypeDetailPage));
 		Routing.RegisterRoute("PhotoGalleryPage", typeof(PhotoGalleryPage));
 		Routing.RegisterRoute("LoginPage", typeof(LoginPage));
+		Routing.RegisterRoute("LogViewerPage", typeof(LogViewerPage));
+		Routing.RegisterRoute("AccountPage", typeof(AccountPage));
+	}
+
+	private async void OnViewLogsClicked(object sender, EventArgs e)
+	{
+		try
+		{
+			await Shell.Current.GoToAsync("LogViewerPage");
+		}
+		catch (Exception ex)
+		{
+			await DisplayAlert("Error", $"Failed to open log viewer: {ex.Message}", "OK");
+			System.Diagnostics.Debug.WriteLine($"Error navigating to LogViewerPage: {ex.Message}");
+			Console.WriteLine($"Error navigating to LogViewerPage: {ex.Message}");
+		}
 	}
 
 	private async void OnSignOutClicked(object sender, EventArgs e)
@@ -50,24 +66,23 @@ public partial class AppShell : Shell
 			
 			try
 			{
-				await _authService.SignOutAsync();
+			await _authService.SignOutAsync();
 				
 				// Clear authentication state
 				Preferences.Set("IsAuthenticated", false);
 				Preferences.Remove("UserId");
 				Preferences.Remove("UserEmail");
-				Preferences.Remove("RememberMe");
 				
 				System.Diagnostics.Debug.WriteLine("Authentication state cleared");
 				Console.WriteLine("Authentication state cleared");
 			
-				// Create a new LoginPage and set it as the window page
-				var loginPage = new LoginPage(_authService);
-				
-				// Use the recommended approach to update the window page
-				if (Application.Current.Windows.Count > 0)
-				{
-					Application.Current.Windows[0].Page = loginPage;
+			// Create a new LoginPage and set it as the window page
+			var loginPage = new LoginPage(_authService);
+			
+			// Use the recommended approach to update the window page
+			if (Application.Current.Windows.Count > 0)
+			{
+				Application.Current.Windows[0].Page = loginPage;
 					System.Diagnostics.Debug.WriteLine("Window page updated to LoginPage");
 					Console.WriteLine("Window page updated to LoginPage");
 				}
@@ -84,9 +99,9 @@ public partial class AppShell : Shell
 				try
 				{
 					var loginPage = new LoginPage(_authService);
-					if (Application.Current.Windows.Count > 0)
-					{
-						Application.Current.Windows[0].Page = loginPage;
+			if (Application.Current.Windows.Count > 0)
+			{
+				Application.Current.Windows[0].Page = loginPage;
 						System.Diagnostics.Debug.WriteLine("Fallback navigation to LoginPage completed");
 						Console.WriteLine("Fallback navigation to LoginPage completed");
 					}

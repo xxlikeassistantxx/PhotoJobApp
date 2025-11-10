@@ -91,10 +91,16 @@ namespace PhotoJobApp
                     Preferences.Remove("UserId");
                     Preferences.Remove("UserEmail");
                     Preferences.Remove("RememberMe");
+                    Preferences.Remove("FirebaseUserId");
+                    Preferences.Remove("FirebaseUserEmail");
+                    Preferences.Remove("FirebaseUserDisplayName");
+                    Preferences.Remove("FirebaseIdToken");
+                    Preferences.Remove("FirebaseRefreshToken");
+                    Preferences.Remove("FirebaseAuthData:v1");
                     
                     // Navigate to login page
                     var loginPage = new LoginPage(_authService);
-                    if (Application.Current.Windows.Count > 0)
+                    if (Application.Current?.Windows?.Count > 0)
                     {
                         Application.Current.Windows[0].Page = loginPage;
                     }
@@ -126,6 +132,32 @@ namespace PhotoJobApp
             Preferences.Set("SyncJobTypesEnabled", e.Value);
             // Apply sync job types changes here when implemented
             System.Diagnostics.Debug.WriteLine($"Sync Job Types setting changed to: {e.Value}");
+        }
+
+        private async void OnPrivacyPolicyClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                var privacyPolicyPage = new PrivacyPolicyPage();
+                await Navigation.PushAsync(privacyPolicyPage);
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"Failed to open Privacy Policy: {ex.Message}", "OK");
+            }
+        }
+
+        private async void OnTermsOfServiceClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                var termsPage = new TermsOfServicePage();
+                await Navigation.PushAsync(termsPage);
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"Failed to open Terms of Service: {ex.Message}", "OK");
+            }
         }
     }
 } 

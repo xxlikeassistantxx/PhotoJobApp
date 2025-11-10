@@ -18,6 +18,12 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+#if IOS
+        // Register iOS-specific Google Sign-In service
+        builder.Services.AddSingleton<PhotoJobApp.Platforms.iOS.GoogleSignInService>();
+        builder.Services.AddSingleton<IGoogleSignInService>(sp => sp.GetRequiredService<PhotoJobApp.Platforms.iOS.GoogleSignInService>());
+#endif
+        
         builder.Services.AddSingleton<FirebaseAuthService>();
         
         // Register services that need user context

@@ -104,7 +104,8 @@
                         </StackLayout>
                         
                         <!-- Google Sign In -->
-                        <Button Text="Sign in with Google" 
+                        <Button x:Name="GoogleSignInButton"
+                                Text="Sign in with Google" 
                                 BackgroundColor="#4285F4"
                                 TextColor="White"
                                 HeightRequest="50"

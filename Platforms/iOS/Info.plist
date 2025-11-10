@@ -30,5 +30,26 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		<key>CFBundleURLSchemes</key>
+		<array>
+			<string>com.pinebelttrophy.photojobapp2025</string>
+			<string>com.googleusercontent.apps.1021759232753-mm6ns7f4r20aohg8ric4med68kqtul9e</string>
+				<string>com.googleusercontent.apps.1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh</string>
+		</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>googlegmail</string>
+		<string>googlechrome</string>
+		<string>googlechromes</string>
+		<string>comgooglemaps</string>
+		<string>comgooglemaps-x-callback</string>
+	</array>
 </dict>
 </plist>

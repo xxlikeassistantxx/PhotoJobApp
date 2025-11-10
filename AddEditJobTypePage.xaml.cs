@@ -36,39 +36,9 @@ public partial class AddEditJobTypePage : ContentPage
             HasStatus = true,
             HasNotes = true,
             HasUrgentFlag = true,
-            StatusOptions = "Pending,In Progress,Completed,Cancelled",
-            Color = "#512BD4" // Default to Purple
+            StatusOptions = "Pending,In Progress,Completed,Cancelled"
         };
         BindingContext = _jobType;
-        
-        // Set the color picker to show the color name
-        UpdateColorPickerSelection();
-    }
-
-    private void UpdateColorPickerSelection()
-    {
-        try
-        {
-            // Find the color name for the current hex code
-            var colorName = ThemeService.GetColorName(_jobType.Color);
-            
-            // Update the color picker selection
-            if (ColorPicker != null)
-            {
-                ColorPicker.SelectedItem = colorName;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error updating color picker: {ex.Message}");
-        }
-    }
-
-    private string GetHexCodeFromColorName(string colorName)
-    {
-        var colors = ThemeService.GetAvailableColors();
-        var color = colors.FirstOrDefault(c => c.Name.Equals(colorName, StringComparison.OrdinalIgnoreCase));
-        return color?.HexCode ?? "#512BD4"; // Default to Purple if not found
     }
 
     private async void LoadJobTypeAsync(int jobTypeId)
@@ -85,41 +55,30 @@ public partial class AddEditJobTypePage : ContentPage
             _jobTypeService = await JobTypeService.CreateAsync(userId);
         }
 
-                var jobType = await _jobTypeService.GetJobTypeAsync(jobTypeId);
-                if (jobType != null)
+            var jobType = await _jobTypeService.GetJobTypeAsync(jobTypeId);
+            if (jobType != null)
+            {
+                _jobType = jobType;
+                if (string.IsNullOrEmpty(_jobType.CustomFields))
                 {
-                    _jobType = jobType;
-                    
-                    // Convert hex code to color name for display
-                    if (!string.IsNullOrEmpty(_jobType.Color) && _jobType.Color.StartsWith("#"))
+                    _jobType.CustomFieldsList = new ObservableCollection<CustomField>();
+                }
+                else
+                {
+                    try
                     {
-                        var colorName = ThemeService.GetColorName(_jobType.Color);
-                        _jobType.Color = colorName;
+                        _jobType.CustomFieldsList = new ObservableCollection<CustomField>(
+                            JsonSerializer.Deserialize<List<CustomField>>(_jobType.CustomFields)
+                        );
                     }
-                    
-                    // Load custom fields
-                    if (string.IsNullOrEmpty(_jobType.CustomFields))
+                    catch (JsonException ex)
                     {
+                        System.Diagnostics.Debug.WriteLine($"Error deserializing custom fields: {ex.Message}");
                         _jobType.CustomFieldsList = new ObservableCollection<CustomField>();
                     }
-                    else
-                    {
-                        try
-                        {
-                            _jobType.CustomFieldsList = new ObservableCollection<CustomField>(
-                                JsonSerializer.Deserialize<List<CustomField>>(_jobType.CustomFields)
-                            );
-                        }
-                        catch (JsonException ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Error deserializing custom fields: {ex.Message}");
-                            _jobType.CustomFieldsList = new ObservableCollection<CustomField>();
-                        }
-                    }
-                    
-                    BindingContext = _jobType;
-                    UpdateColorPickerSelection();
                 }
+                BindingContext = _jobType;
+            }
         }
         catch (Exception ex)
         {
@@ -187,35 +146,11 @@ public partial class AddEditJobTypePage : ContentPage
             System.Diagnostics.Debug.WriteLine($"Serialized custom fields: {_jobType.CustomFields}");
             Console.WriteLine($"Serialized custom fields: {_jobType.CustomFields}");
             
-            // Convert color name to hex code
-            if (!string.IsNullOrEmpty(_jobType.Color) && !_jobType.Color.StartsWith("#"))
-            {
-                _jobType.Color = GetHexCodeFromColorName(_jobType.Color);
-                System.Diagnostics.Debug.WriteLine($"Converted color '{_jobType.Color}' to hex: {_jobType.Color}");
-                Console.WriteLine($"Converted color '{_jobType.Color}' to hex: {_jobType.Color}");
-            }
-            
             System.Diagnostics.Debug.WriteLine("Saving job type to database...");
             Console.WriteLine("Saving job type to database...");
             var result = await _jobTypeService.SaveJobTypeAsync(_jobType);
             System.Diagnostics.Debug.WriteLine($"Save result: {result}");
             Console.WriteLine($"Save result: {result}");
-            
-            // Save the color preference for theming
-            if (!string.IsNullOrEmpty(_jobType.Color))
-            {
-                try
-                {
-                    ThemeService.Instance.PrimaryColor = Microsoft.Maui.Graphics.Color.FromArgb(_jobType.Color);
-                    System.Diagnostics.Debug.WriteLine($"Color preference saved: {_jobType.Color}");
-                    Console.WriteLine($"Color preference saved: {_jobType.Color}");
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error saving color preference: {ex.Message}");
-                    Console.WriteLine($"Error saving color preference: {ex.Message}");
-                }
-            }
             
             await DisplayAlert("Success", "Job type saved successfully!", "OK");
             

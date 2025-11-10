@@ -1,3 +1,4 @@
+using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using PhotoJobApp.Models;
 
@@ -29,7 +30,7 @@ namespace PhotoJobApp.Services
         {
             get
             {
-                var colorString = Preferences.Get("PrimaryColor", "#512BD4");
+                var colorString = Preferences.Get("PrimaryColor", "#4a7c59");
                 return Color.FromArgb(colorString);
             }
             set
@@ -117,9 +118,13 @@ namespace PhotoJobApp.Services
             if (element == null) return;
 
             // Apply theme based on element type
-            if (element is Frame frame)
+            if (element is Border border)
             {
-                frame.BackgroundColor = SurfaceColor;
+                border.BackgroundColor = SurfaceColor;
+            }
+            else if (element is ContentView contentView)
+            {
+                contentView.BackgroundColor = SurfaceColor;
             }
             else if (element is Button button)
             {

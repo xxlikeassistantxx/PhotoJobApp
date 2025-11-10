@@ -29,50 +29,26 @@ namespace PhotoJobApp
         {
             try
             {
-                if (_jobTypeService == null)
-                {
-                    // Get current user for cloud sync
-                    var authService = new FirebaseAuthService();
-                    var currentUser = await authService.GetCurrentUserAsync();
-                    var userId = currentUser?.Id;
-                    
-                    _jobTypeService = await JobTypeService.CreateAsync(userId);
-                }
+                        if (_jobTypeService == null)
+        {
+            // Get current user for cloud sync
+            var authService = new FirebaseAuthService();
+            var currentUser = await authService.GetCurrentUserAsync();
+            var userId = currentUser?.Id;
+            
+            _jobTypeService = await JobTypeService.CreateAsync(userId);
+        }
 
                 var jobType = await _jobTypeService.GetJobTypeAsync(jobTypeId);
                 if (jobType != null)
                 {
                     _jobType = jobType;
                     BindingContext = _jobType;
-                    
-                    // Apply theme from job type
-                    ApplyThemeFromJobType();
                 }
             }
             catch (Exception ex)
             {
                 await DisplayAlert("Error", $"Failed to load job type: {ex.Message}", "OK");
-            }
-        }
-
-        private void ApplyThemeFromJobType()
-        {
-            try
-            {
-                if (_jobType != null)
-                {
-                    // Update theme colors from the job type
-                    ThemeService.Instance.UpdateThemeFromJobType(_jobType);
-                    
-                    // Apply the updated theme with custom background color
-                    var jobTypeColor = Microsoft.Maui.Graphics.Color.FromArgb(_jobType.Color);
-                    var darkerBackground = ThemeService.Instance.GetLighterColor(jobTypeColor, 0.7f);
-                    ThemeService.Instance.ApplyThemeToPage(this, darkerBackground);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error applying theme from job type: {ex.Message}");
             }
         }
 
@@ -83,8 +59,14 @@ namespace PhotoJobApp
 
         private async void OnCreateJobClicked(object sender, EventArgs e)
         {
-            // Navigate to AddEditJobPage with the job type pre-selected
-            await Shell.Current.GoToAsync($"AddEditJobPage?JobTypeId={_jobType.Id}");
+            // Create a new job with this job type pre-selected
+            var newJob = new PhotoJob
+            {
+                JobTypeId = _jobType.Id,
+                Status = _jobType.StatusList?.FirstOrDefault() ?? "Pending"
+            };
+            
+            await Shell.Current.GoToAsync("AddEditJobPage");
         }
 
         private async void OnPushToCloudClicked(object sender, EventArgs e)

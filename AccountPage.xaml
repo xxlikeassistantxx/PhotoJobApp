@@ -33,7 +33,7 @@
                                    FontAttributes="Bold"
                                    WidthRequest="80"/>
                             <Label x:Name="UserEmailLabel" 
-                                   Text="user@example.com" 
+                                   Text="Loading..." 
                                    Style="{StaticResource BodyText}"/>
                         </StackLayout>
                         
@@ -124,6 +124,40 @@
                                     HorizontalOptions="Start"
                                     Toggled="OnSyncJobTypesToggled"/>
                         </StackLayout>
+                    </StackLayout>
+                </Frame>
+
+                <!-- Legal Information Section -->
+                <Frame Padding="20" CornerRadius="15" HasShadow="True" BackgroundColor="White">
+                    <StackLayout>
+                        <Label Text="📋 Legal Information" 
+                               Style="{StaticResource SubHeadline}"
+                               FontAttributes="Bold"
+                               Margin="0,0,0,15"/>
+                        
+                        <Button Text="Privacy Policy" 
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                BorderColor="{StaticResource Primary}"
+                                BorderWidth="1"
+                                CornerRadius="10"
+                                Margin="0,5,0,0"
+                                Clicked="OnPrivacyPolicyClicked"/>
+                        
+                        <Button Text="Terms of Service" 
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                BorderColor="{StaticResource Primary}"
+                                BorderWidth="1"
+                                CornerRadius="10"
+                                Margin="0,10,0,0"
+                                Clicked="OnTermsOfServiceClicked"/>
+                        
+                        <Label Text="Version 1.0.0" 
+                               Style="{StaticResource BodyText}"
+                               HorizontalOptions="Center"
+                               TextColor="Gray"
+                               Margin="0,15,0,0"/>
                     </StackLayout>
                 </Frame>
 

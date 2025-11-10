@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>1021759232753-hhfhegcuq82cc9er9slf1r3iuqkkpbsh.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.1021759232753-hhfhegcuq82cc9er9slf1r3iuqkkpbsh</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>1021759232753-qthm6ln3fsrb1k86h3rv1baq48c3org2.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDDNFUx-oGkgHCtGRQ-N8xw_JbLM6Cbu4g</string>
+	<key>GCM_SENDER_ID</key>
+	<string>1021759232753</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.company.photomanagerapp</string>
+	<key>PROJECT_ID</key>
+	<string>photo-job-manager</string>
+	<key>STORAGE_BUCKET</key>
+	<string>photo-job-manager.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:1021759232753:ios:51b2707908702e6eeae750</string>
+	<key>DATABASE_URL</key>
+	<string>https://photo-job-manager-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>

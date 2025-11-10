@@ -8,11 +8,9 @@ namespace PhotoJobApp
     public partial class MainPage : ContentPage
     {
         private readonly PhotoJobService _photoJobService;
-        private JobTypeService? _jobTypeService;
-        private readonly FirebaseAuthService _authService;
         public ObservableCollection<PhotoJob> Jobs { get; set; }
 
-        public MainPage(FirebaseAuthService authService = null)
+        public MainPage()
         {
             System.Diagnostics.Debug.WriteLine("MainPage constructor called");
             Console.WriteLine("MainPage constructor called");
@@ -24,7 +22,6 @@ namespace PhotoJobApp
                 Console.WriteLine("MainPage InitializeComponent completed");
                 
                 _photoJobService = new PhotoJobService();
-                _authService = authService ?? new FirebaseAuthService();
                 Jobs = new ObservableCollection<PhotoJob>();
                 BindingContext = this;
                 
@@ -65,28 +62,12 @@ namespace PhotoJobApp
                     return;
                 }
                 
-                // Initialize JobTypeService if not already done
-                if (_jobTypeService == null)
-                {
-                    var userId = _authService.GetCurrentUserAsync().Result?.Id ?? "";
-                    _jobTypeService = await JobTypeService.CreateAsync(userId);
-                }
-                
                 System.Diagnostics.Debug.WriteLine("Loading jobs from database...");
                 Console.WriteLine("Loading jobs from database...");
                 
                 var jobs = await _photoJobService.GetJobsAsync();
                 System.Diagnostics.Debug.WriteLine($"Loaded {jobs.Count} jobs from database");
                 Console.WriteLine($"Loaded {jobs.Count} jobs from database");
-                
-                // Load job type information for each job
-                foreach (var job in jobs)
-                {
-                    if (job.JobTypeId > 0)
-                    {
-                        job.JobType = await _jobTypeService.GetJobTypeAsync(job.JobTypeId);
-                    }
-                }
                 
                 Jobs.Clear();
                 foreach (var job in jobs)
@@ -243,13 +224,21 @@ namespace PhotoJobApp
         {
             try
             {
-                var authService = new FirebaseAuthService();
+                // Get FirebaseAuthService from DI
+                var authService = Application.Current?.Handler?.MauiContext?.Services.GetService<FirebaseAuthService>();
+                if (authService == null)
+                {
+                    authService = new FirebaseAuthService();
+                }
+                
                 var accountPage = new AccountPage(authService);
                 await Navigation.PushAsync(accountPage);
             }
             catch (Exception ex)
             {
                 await DisplayAlert("Error", $"Failed to open account page: {ex.Message}", "OK");
+                System.Diagnostics.Debug.WriteLine($"Error navigating to AccountPage: {ex.Message}");
+                Console.WriteLine($"Error navigating to AccountPage: {ex.Message}");
             }
         }
     }
