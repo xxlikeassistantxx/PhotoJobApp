@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.JobDetailPage"
+             Title="Job Details">
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="15">
+            <!-- Job Title -->
+            <Border Padding="15">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="{Binding Title}" 
+                           Style="{StaticResource Headline}" 
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Status}" 
+                           TextColor="{Binding StatusColor}"
+                           FontSize="16"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Created Date (always visible) -->
+            <Border Padding="15">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Created" 
+                           Style="{StaticResource CaptionText}"
+                           TextColor="Gray"/>
+                    <Label Text="{Binding FormattedCreatedDate}" 
+                           Style="{StaticResource CaptionText}"
+                           TextColor="Gray"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Client Information -->
+            <Border x:Name="ClientInfoSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Client Information" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding ClientName}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                    <Label Text="{Binding ClientPhone}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                    <Label Text="{Binding ClientEmail}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Description -->
+            <Border x:Name="DescriptionSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Description" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Description}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Pricing -->
+            <Border x:Name="PricingSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Price" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding FormattedPrice}" 
+                           TextColor="Green"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Status -->
+            <Border x:Name="StatusSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Status" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Status}" 
+                           TextColor="{Binding StatusColor}"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Location -->
+            <Border x:Name="LocationSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Location" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Location}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Due Date -->
+            <Border x:Name="DueDateSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Due Date" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding FormattedDueDate}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Notes -->
+            <Border x:Name="NotesSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Notes" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding Notes}" 
+                           Style="{StaticResource BodyText}"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Custom Fields -->
+            <Border x:Name="CustomFieldsSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Label Text="Custom Fields" 
+                           Style="{StaticResource SubHeadline}"
+                           FontAttributes="Bold"/>
+                    <StackLayout x:Name="CustomFieldsContainer" 
+                                 Margin="0,5,0,0"
+                                 Spacing="10"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Photos -->
+            <Border x:Name="PhotosSection" Padding="15" IsVisible="False">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" 
+                               Text="Photos" 
+                               Style="{StaticResource SubHeadline}"
+                               FontAttributes="Bold"/>
+                        <Button Grid.Column="1" 
+                                Text="📷 View All" 
+                                TextColor="White"
+                                BackgroundColor="#007AFF"
+                                FontSize="12"
+                                Padding="10,5"
+                                CornerRadius="15"
+                                Clicked="OnViewPhotosClicked"/>
+                    </Grid>
+                    <CollectionView ItemsSource="{Binding PhotoList}" 
+                                   HeightRequest="200"
+                                   Margin="0,10,0,0">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="5" Padding="5" Background="LightGray">
+                                    <Border.StrokeShape><RoundRectangle CornerRadius="5"/></Border.StrokeShape>
+                                    <Grid>
+                                        <Image Source="{Binding}" HeightRequest="80" Aspect="AspectFill"/>
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPhotoTapped"/>
+                                    </Grid.GestureRecognizers>
+                                        <!-- Overlay to indicate it's clickable -->
+                                        <BoxView BackgroundColor="Transparent" 
+                                                 Opacity="0.1"
+                                                 IsVisible="False"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    
+                    <!-- Photo count indicator -->
+                    <Label Text="{Binding PhotoList.Count, StringFormat='{0} photo(s)'}" 
+                           TextColor="Gray"
+                           FontSize="12"
+                           HorizontalOptions="Center"
+                           Margin="0,5,0,0"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Urgent Flag -->
+            <Border x:Name="UrgentSection" Padding="15" IsVisible="False"
+                   Background="{Binding IsUrgent, Converter={StaticResource BoolToColorConverter}}">
+                <Border.StrokeShape><RoundRectangle CornerRadius="10"/></Border.StrokeShape>
+                <Border.Shadow><Shadow Brush="Gray" Offset="2,2" Radius="4" Opacity="0.4"/></Border.Shadow>
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="🚨 URGENT" 
+                           IsVisible="{Binding IsUrgent}"
+                           TextColor="White"
+                           FontAttributes="Bold"/>
+                    <Label Text="Not Urgent" 
+                           IsVisible="{Binding IsUrgent, Converter={StaticResource InverseBoolConverter}}"
+                           TextColor="Gray"/>
+                </StackLayout>
+            </Border>
+
+            <!-- Action Buttons -->
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Margin="0,20,0,0">
+                <Button Text="☁️ Push" 
+                        BackgroundColor="#FFA500"
+                        TextColor="White"
+                        WidthRequest="100"
+                        Margin="10,0"
+                        Clicked="OnPushToCloudClicked"/>
+                <Button Text="Edit" 
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        WidthRequest="100"
+                        Margin="10,0"
+                        Clicked="OnEditClicked"/>
+                <Button Text="Delete" 
+                        BackgroundColor="Red"
+                        TextColor="White"
+                        WidthRequest="100"
+                        Margin="10,0"
+                        Clicked="OnDeleteClicked"/>
+            </StackLayout>
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage> 

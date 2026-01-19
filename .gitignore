@@ -340,6 +340,15 @@ ASALocalRun/
 
 # MSBuild Binary and Structured Log
 *.binlog
+*.binlog.xml
+hotrestart.binlog
+hotrestart.binlog.xml
+
+# Temporary backup files
+*.Backup*.tmp
+*.tmp
+testlog.zip
+testlog_extracted/
 
 # NVidia Nsight GPU debugger configuration file
 *.nvuser

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.JobTypeManagementPage"
+             xmlns:models="clr-namespace:PhotoJobApp.Models"
+             xmlns:local="clr-namespace:PhotoJobApp"
+             x:DataType="local:JobTypeManagementPage"
+             Title="Job Types"
+             BackgroundColor="#F0F0F0">
+
+    <Grid RowDefinitions="Auto,*">
+        
+        <Frame Grid.Row="0" Padding="15" Margin="10" CornerRadius="10" BackgroundColor="#512BD4">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                <Label Grid.Column="0" Text="Job Type Templates" FontSize="22" FontAttributes="Bold" TextColor="White" VerticalOptions="Center"/>
+                <Button Grid.Column="1" Text="☁️ Pull" Clicked="OnPullFromCloudClicked" BackgroundColor="Transparent" TextColor="White" CornerRadius="20" Padding="10,5" Margin="0,0,5,0"/>
+                <Button Grid.Column="2" Text="🔄 Sync" Clicked="OnSyncClicked" BackgroundColor="Transparent" TextColor="White" CornerRadius="20" Padding="10,5" Margin="0,0,5,0"/>
+                <Button Grid.Column="3" Text="+ New" Clicked="OnAddJobTypeClicked" BackgroundColor="White" TextColor="#512BD4" CornerRadius="20" Padding="15,5"/>
+            </Grid>
+        </Frame>
+
+        <CollectionView Grid.Row="1" 
+                        ItemsSource="{Binding JobTypes}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnJobTypeTapped">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:JobType">
+                    <Frame Margin="10,5" Padding="15" CornerRadius="8" BorderColor="#E0E0E0" BackgroundColor="White">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                            <Label Grid.Column="0" Text="{Binding Icon}" FontSize="30" VerticalOptions="Center"/>
+                            <StackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="17"/>
+                                <Label Text="{Binding Description}" FontSize="13" TextColor="#666666"/>
+                            </StackLayout>
+                            <Image Grid.Column="2" Source="chevron_right.png" HeightRequest="18" Opacity="0.5" VerticalOptions="Center"/>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage> 
