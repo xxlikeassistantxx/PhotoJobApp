@@ -340,6 +340,15 @@ ASALocalRun/
 
 # MSBuild Binary and Structured Log
 *.binlog
+*.binlog.xml
+hotrestart.binlog
+hotrestart.binlog.xml
+
+# Temporary backup files
+*.Backup*.tmp
+*.tmp
+testlog.zip
+testlog_extracted/
 
 # NVidia Nsight GPU debugger configuration file
 *.nvuser
@@ -361,3 +370,17 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Configuration files with sensitive data
+appsettings.json
+appsettings.*.json
+secrets.json
+
+# Firebase configuration files (contain API keys and client IDs)
+Platforms/Android/google-services.json
+Platforms/iOS/GoogleService-Info.plist
+
+# Log files (may contain sensitive data)
+*.log
+LogDump/
+testlog_extracted/

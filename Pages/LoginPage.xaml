@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.LoginPage"
+             Title="Sign In">
+
+    <ScrollView>
+        <Grid RowDefinitions="Auto,*,Auto" Padding="20">
+            <!-- Header -->
+            <StackLayout Grid.Row="0" Margin="0,40,0,30">
+                <Label Text="Photo Job Manager" 
+                       Style="{StaticResource Headline}"
+                       HorizontalOptions="Center"
+                       Margin="0,0,0,10"/>
+                <Label Text="Sign in to manage your photo jobs" 
+                       Style="{StaticResource BodyText}"
+                       HorizontalOptions="Center"
+                       TextColor="Gray"/>
+            </StackLayout>
+
+            <!-- Login Form -->
+            <StackLayout Grid.Row="1" Spacing="25" VerticalOptions="Center" Margin="0,20,0,20">
+                <Frame Padding="25" CornerRadius="15" HasShadow="True" BackgroundColor="White">
+                    <StackLayout Spacing="20">
+                        <!-- Email Section -->
+                        <StackLayout Spacing="8">
+                            <Label Text="Email" 
+                                   Style="{StaticResource SubHeadline}"
+                                   FontAttributes="Bold"/>
+                            <Entry x:Name="EmailEntry" 
+                                   Placeholder="Enter your email"
+                                   Keyboard="Email"
+                                   HeightRequest="50"
+                                   Margin="0,5,0,0"/>
+                        </StackLayout>
+                        
+                        <!-- Password Section -->
+                        <StackLayout Spacing="8">
+                            <Label Text="Password" 
+                                   Style="{StaticResource SubHeadline}"
+                                   FontAttributes="Bold"/>
+                            <Entry x:Name="PasswordEntry" 
+                                   Placeholder="Enter your password"
+                                   IsPassword="True"
+                                   HeightRequest="50"
+                                   Margin="0,5,0,0"/>
+                        </StackLayout>
+                        
+                        <!-- Remember Me Checkbox -->
+                        <HorizontalStackLayout Spacing="12" Margin="0,10,0,0">
+                            <CheckBox x:Name="RememberMeCheckBox" 
+                                      IsChecked="False"
+                                      VerticalOptions="Center"/>
+                            <Label Text="Remember Me" 
+                                   Style="{StaticResource BodyText}"
+                                   VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        
+                        <!-- Sign In Button -->
+                        <Button Text="Sign In" 
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="White"
+                                HeightRequest="50"
+                                CornerRadius="10"
+                                Clicked="OnSignInClicked"
+                                Margin="0,15,0,0"/>
+                        
+                        <!-- Email Verification Status -->
+                        <StackLayout x:Name="VerificationStatusLayout" IsVisible="False" Margin="0,10,0,0">
+                            <Label x:Name="VerificationStatusLabel" 
+                                   Text="Please check your email and verify your account."
+                                   TextColor="Orange"
+                                   HorizontalOptions="Center"
+                                   FontSize="12"
+                                   Margin="0,0,0,10"/>
+                            <Button Text="Resend Verification Email" 
+                                    BackgroundColor="Transparent"
+                                    TextColor="{StaticResource Primary}"
+                                    BorderColor="{StaticResource Primary}"
+                                    BorderWidth="1"
+                                    HeightRequest="40"
+                                    CornerRadius="8"
+                                    Clicked="OnResendVerificationClicked"/>
+                        </StackLayout>
+                        
+                        <!-- Sign Up Button -->
+                        <Button Text="Sign Up" 
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                BorderColor="{StaticResource Primary}"
+                                BorderWidth="1"
+                                HeightRequest="50"
+                                CornerRadius="10"
+                                Clicked="OnSignUpClicked"/>
+                        
+                        <!-- Divider -->
+                        <StackLayout Orientation="Horizontal" Margin="0,20,0,20">
+                            <BoxView Color="LightGray" HeightRequest="1" VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
+                            <Label Text="OR" 
+                                   Style="{StaticResource CaptionText}"
+                                   Margin="10,0"
+                                   TextColor="Gray"/>
+                            <BoxView Color="LightGray" HeightRequest="1" VerticalOptions="Center" HorizontalOptions="FillAndExpand"/>
+                        </StackLayout>
+                        
+                        <!-- Google Sign In -->
+                        <Button x:Name="GoogleSignInButton"
+                                Text="Sign in with Google" 
+                                BackgroundColor="#4285F4"
+                                TextColor="White"
+                                HeightRequest="50"
+                                CornerRadius="10"
+                                Clicked="OnGoogleSignInClicked"/>
+
+                        <!-- Debug: Show Redirect URL -->
+                        <Button Text="Show Redirect URL"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                BorderColor="{StaticResource Primary}"
+                                BorderWidth="1"
+                                HeightRequest="40"
+                                CornerRadius="8"
+                                Clicked="OnShowRedirectUrlClicked"/>
+                    </StackLayout>
+                </Frame>
+            </StackLayout>
+
+            <!-- Footer -->
+            <StackLayout Grid.Row="2" Margin="0,30,0,20">
+                <Label Text="Don't have an account?" 
+                       Style="{StaticResource CaptionText}"
+                       HorizontalOptions="Center"
+                       TextColor="Gray"
+                       Margin="0,0,0,10"/>
+                <Button Text="Create Account" 
+                        BackgroundColor="Transparent"
+                        TextColor="{StaticResource Primary}"
+                        HeightRequest="40"
+                        Clicked="OnCreateAccountClicked"/>
+                <Button Text="Forgot Password?" 
+                        BackgroundColor="Transparent"
+                        TextColor="{StaticResource Primary}"
+                        HeightRequest="40"
+                        Clicked="OnForgotPasswordClicked"
+                        Margin="0,10,0,0"/>
+            </StackLayout>
+        </Grid>
+    </ScrollView>
+
+</ContentPage> 

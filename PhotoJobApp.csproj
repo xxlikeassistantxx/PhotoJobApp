@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
@@ -24,7 +24,7 @@
 		<ApplicationTitle>PhotoJobApp</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.photojobapp</ApplicationId>
+		<ApplicationId>com.pinebelttrophy.photojobapp2025</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -41,21 +41,27 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		
 		<!-- iOS Code Signing and Provisioning -->
-		<CodesignKey>iPhone Developer</CodesignKey>
+		<CodesignKey>Apple Development</CodesignKey>
 		<CodesignProvision>Automatic</CodesignProvision>
 		<MtouchLink>None</MtouchLink>
 		<MtouchDebug>true</MtouchDebug>
 		<MtouchNoSymbolStrip>true</MtouchNoSymbolStrip>
-		<MtouchFastDev>true</MtouchFastDev>
+		<MtouchFastDev>false</MtouchFastDev>
 		<MtouchUseLlvm>false</MtouchUseLlvm>
 		<MtouchUseBitcode>false</MtouchUseBitcode>
-		<DevelopmentTeam>57JVV87HA6</DevelopmentTeam>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(TargetFramework)'=='net9.0-ios'">
-	  <CodesignKey>Apple Development: Created via API (57JVV87HA6)</CodesignKey>
-	  <CodesignProvision>VS: com.companyname.photojobapp Development</CodesignProvision>
+	  <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+	  <DevelopmentTeam>TCR45K9DFQ</DevelopmentTeam>
+	  <CodesignKey>Apple Development: Created via API (F697KPX6TL)</CodesignKey>
+	  <CodesignProvision>VS: com.pinebelttrophy.photojobapp2025 Development</CodesignProvision>
+	  <SkipStaticLibraryValidation>true</SkipStaticLibraryValidation>
+	  <DefineConstants>$(DefineConstants);USE_NATIVE_GOOGLE_SIGNIN</DefineConstants>
+	  <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
+
+
 
 
 
@@ -79,10 +85,284 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="7.0.1" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.7" />
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.0" />
 	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)'=='net9.0-ios'">
+		<PackageReference Include="Xamarin.Google.iOS.SignIn" Version="5.0.2.4" />
+		<BundleResource Include="Platforms\iOS\GoogleService-Info.plist">
+			<Link>GoogleService-Info.plist</Link>
+		</BundleResource>
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)'=='net9.0-android'">
+		<GoogleServicesJson Include="Platforms\Android\google-services.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="LogDump\**" />
+		<None Include="LogDump\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<MauiAsset Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</MauiAsset>
+	</ItemGroup>
+
+	<!-- Ensure main assembly is copied as .exe for Hot Restart - run after build completes -->
+	<Target Name="EnsureMainAssemblyForHotRestart" Condition="'$(TargetFramework)'=='net9.0-ios'" AfterTargets="Build">
+		<PropertyGroup>
+			<MainAssemblyDll>$(OutputPath)$(AssemblyName).dll</MainAssemblyDll>
+			<MainAssemblyExe>$(OutputPath)$(AssemblyName).exe</MainAssemblyExe>
+		</PropertyGroup>
+		
+		<!-- Copy DLL to EXE in output directory - Hot Restart will copy this to device -->
+		<Copy SourceFiles="$(MainAssemblyDll)" DestinationFiles="$(MainAssemblyExe)" SkipUnchangedFiles="true" Condition="Exists('$(MainAssemblyDll)')" />
+	</Target>
+	
+	<!-- Add EXE to Content items so Hot Restart includes it in deployment -->
+	<Target Name="AddExeToHotRestartContent" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" BeforeTargets="_CopyFilesToHotRestartContentDir">
+		<PropertyGroup>
+			<MainAssemblyDll>$(OutputPath)$(AssemblyName).dll</MainAssemblyDll>
+			<MainAssemblyExe>$(OutputPath)$(AssemblyName).exe</MainAssemblyExe>
+		</PropertyGroup>
+		
+		<!-- Ensure EXE exists -->
+		<Copy SourceFiles="$(MainAssemblyDll)" DestinationFiles="$(MainAssemblyExe)" SkipUnchangedFiles="true" Condition="Exists('$(MainAssemblyDll)')" />
+		
+		<!-- Add EXE as Content that will be copied to device -->
+		<ItemGroup Condition="Exists('$(MainAssemblyExe)')">
+			<Content Include="$(MainAssemblyExe)">
+				<Link>$(AssemblyName).exe</Link>
+				<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			</Content>
+		</ItemGroup>
+	</Target>
+
+	<!-- Include DLL as Content with EXE name for Hot Restart - use target to ensure OutputPath is available -->
+	<Target Name="IncludeExeAsContentForHotRestart" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" BeforeTargets="_CopyFilesToHotRestartContentDir">
+		<PropertyGroup>
+			<MainAssemblyDll>$(OutputPath)$(AssemblyName).dll</MainAssemblyDll>
+			<MainAssemblyExe>$(OutputPath)$(AssemblyName).exe</MainAssemblyExe>
+		</PropertyGroup>
+		
+		<!-- Ensure EXE exists in output -->
+		<Copy SourceFiles="$(MainAssemblyDll)" DestinationFiles="$(MainAssemblyExe)" SkipUnchangedFiles="true" Condition="Exists('$(MainAssemblyDll)')" />
+		
+		<!-- Copy EXE directly to content directory so it gets deployed -->
+		<PropertyGroup>
+			<HotRestartContentExe>$(HotRestartContentDir)$(AssemblyName).exe</HotRestartContentExe>
+		</PropertyGroup>
+		
+		<MakeDir Directories="$(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!=''" />
+		<Copy SourceFiles="$(MainAssemblyExe)" DestinationFiles="$(HotRestartContentExe)" SkipUnchangedFiles="false" Condition="'$(HotRestartContentDir)'!='' and Exists('$(MainAssemblyExe)')" />
+		
+		<Message Importance="High" Text="[HotRestart] Included EXE as content: $(HotRestartContentExe)" Condition="Exists('$(HotRestartContentExe)')" />
+		
+		<!-- Also add EXE to _FilesToCopyToDevice if that ItemGroup exists -->
+		<ItemGroup Condition="Exists('$(MainAssemblyExe)')">
+			<_FilesToCopyToDevice Include="$(MainAssemblyExe)" />
+		</ItemGroup>
+	</Target>
+
+	<!-- Also ensure it's copied after Hot Restart prepares the app bundle -->
+	<Target Name="EnsureMainAssemblyInHotRestartBundle" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" AfterTargets="_PrepareHotRestartApp">
+		<PropertyGroup>
+			<MainAssemblyDll>$(OutputPath)$(AssemblyName).dll</MainAssemblyDll>
+			<MainAssemblyExe>$(OutputPath)$(AssemblyName).exe</MainAssemblyExe>
+		</PropertyGroup>
+		
+		<!-- Ensure EXE exists in output -->
+		<Copy SourceFiles="$(MainAssemblyDll)" DestinationFiles="$(MainAssemblyExe)" SkipUnchangedFiles="true" Condition="Exists('$(MainAssemblyDll)') and !Exists('$(MainAssemblyExe)')" />
+		
+		<!-- Copy to Hot Restart bundle locations -->
+		<ItemGroup>
+			<MainAssemblyDestinations Include="$(HotRestartAppBundlePath)" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<MainAssemblyDestinations Include="$(HotRestartAppBundlePath)out\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<MainAssemblyDestinations Include="$(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!=''" />
+		</ItemGroup>
+		
+		<MakeDir Directories="@(MainAssemblyDestinations)" Condition="@(MainAssemblyDestinations->Count()) &gt; 0" />
+		<Copy SourceFiles="$(MainAssemblyExe)" DestinationFiles="%(MainAssemblyDestinations.Identity)$(AssemblyName).exe" SkipUnchangedFiles="true" Condition="Exists('$(MainAssemblyExe)') and @(MainAssemblyDestinations->Count()) &gt; 0" />
+	</Target>
+
+	<!-- Ensure EXE is copied to Hot Restart content directory before deployment -->
+	<Target Name="EnsureMainAssemblyInContentDir" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" BeforeTargets="_CopyFilesToHotRestartContentDir">
+		<PropertyGroup>
+			<MainAssemblyDll>$(OutputPath)$(AssemblyName).dll</MainAssemblyDll>
+			<MainAssemblyExe>$(OutputPath)$(AssemblyName).exe</MainAssemblyExe>
+		</PropertyGroup>
+		
+		<!-- Ensure EXE exists in output directory -->
+		<Copy SourceFiles="$(MainAssemblyDll)" DestinationFiles="$(MainAssemblyExe)" SkipUnchangedFiles="true" Condition="Exists('$(MainAssemblyDll)')" />
+		
+		<!-- Copy directly to content directory if it exists -->
+		<PropertyGroup>
+			<HotRestartContentExe>$(HotRestartContentDir)$(AssemblyName).exe</HotRestartContentExe>
+		</PropertyGroup>
+		
+		<MakeDir Directories="$(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!=''" />
+		<Copy SourceFiles="$(MainAssemblyExe)" DestinationFiles="$(HotRestartContentExe)" SkipUnchangedFiles="false" Condition="'$(HotRestartContentDir)'!='' and Exists('$(MainAssemblyExe)')" />
+		
+		<Message Importance="High" Text="[HotRestart] Pre-copied $(AssemblyName).exe to content dir: $(HotRestartContentExe)" Condition="Exists('$(HotRestartContentExe)')" />
+		<Warning Text="[HotRestart] WARNING: Could not pre-copy EXE. DLL: $(Exists('$(MainAssemblyDll)')), EXE: $(Exists('$(MainAssemblyExe)')), ContentDir: '$(HotRestartContentDir)'" Condition="'$(HotRestartContentDir)'!='' and !Exists('$(HotRestartContentExe)')" />
+	</Target>
+	
+	<!-- Force include EXE in files that Hot Restart copies - run after _CopyFilesToHotRestartContentDir -->
+	<Target Name="ForceIncludeExeInDeployment" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" AfterTargets="_CopyFilesToHotRestartContentDir">
+		<PropertyGroup>
+			<MainAssemblyDll>$(OutputPath)$(AssemblyName).dll</MainAssemblyDll>
+			<MainAssemblyExe>$(OutputPath)$(AssemblyName).exe</MainAssemblyExe>
+			<HotRestartContentExe>$(HotRestartContentDir)$(AssemblyName).exe</HotRestartContentExe>
+		</PropertyGroup>
+		
+		<!-- Ensure EXE exists in output -->
+		<Copy SourceFiles="$(MainAssemblyDll)" DestinationFiles="$(MainAssemblyExe)" SkipUnchangedFiles="true" Condition="Exists('$(MainAssemblyDll)')" />
+		
+		<!-- Force copy to content directory (Hot Restart may have filtered it out) -->
+		<MakeDir Directories="$(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!=''" />
+		<Copy SourceFiles="$(MainAssemblyExe)" DestinationFiles="$(HotRestartContentExe)" SkipUnchangedFiles="false" Condition="'$(HotRestartContentDir)'!='' and Exists('$(MainAssemblyExe)')" />
+		
+		<Message Importance="High" Text="[HotRestart] Force-copied $(AssemblyName).exe to: $(HotRestartContentExe)" Condition="Exists('$(HotRestartContentExe)')" />
+		<Warning Text="[HotRestart] WARNING: Could not copy $(AssemblyName).exe to content directory. DLL exists: $(Exists('$(MainAssemblyDll)')), EXE exists: $(Exists('$(MainAssemblyExe)')), ContentDir: $(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!='' and !Exists('$(HotRestartContentExe)')" />
+	</Target>
+
+
+	<!-- Ensure PKCS DLL is in output directory first - run very early -->
+	<Target Name="EnsurePkcsInOutput" Condition="'$(TargetFramework)'=='net9.0-ios'" AfterTargets="ResolvePackageAssets" BeforeTargets="_GenerateHotRestartBuildSessionId">
+		<PropertyGroup>
+			<PkcsAssemblyName>System.Security.Cryptography.Pkcs.dll</PkcsAssemblyName>
+			<PkcsPackageLib>$([System.IO.Path]::Combine('$(USERPROFILE)', '.nuget', 'packages', 'system.security.cryptography.pkcs', '8.0.0', 'lib'))</PkcsPackageLib>
+		</PropertyGroup>
+
+		<!-- Find the DLL from NuGet -->
+		<PropertyGroup>
+			<PkcsSourcePath Condition="Exists('$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)</PkcsSourcePath>
+		</PropertyGroup>
+
+		<!-- Copy to output directory if not already there -->
+		<Copy SourceFiles="$(PkcsSourcePath)" DestinationFiles="$(OutputPath)$(PkcsAssemblyName)" SkipUnchangedFiles="true" Condition="'$(PkcsSourcePath)'!='' and !Exists('$(OutputPath)$(PkcsAssemblyName)')" />
+		
+		<!-- Also copy to Hot Restart base directory early if Hot Restart build -->
+		<PropertyGroup Condition="'$(IsHotRestartBuild)'=='true' and '$(PkcsSourcePath)'!=''">
+			<HotRestartBaseDir>$([System.IO.Path]::Combine($(LOCALAPPDATA), 'Xamarin', 'HotRestart'))</HotRestartBaseDir>
+		</PropertyGroup>
+		
+		<MakeDir Directories="$(HotRestartBaseDir)" Condition="'$(IsHotRestartBuild)'=='true' and '$(HotRestartBaseDir)'!=''" />
+		<Copy SourceFiles="$(PkcsSourcePath)" DestinationFiles="$(HotRestartBaseDir)\$(PkcsAssemblyName)" SkipUnchangedFiles="true" Condition="'$(IsHotRestartBuild)'=='true' and '$(PkcsSourcePath)'!='' and '$(HotRestartBaseDir)'!=''" />
+	</Target>
+
+	<!-- Copy PKCS DLL very early in Hot Restart process, right after session ID is generated -->
+	<Target Name="EnsurePkcsForHotRestartVeryEarly" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" AfterTargets="_GenerateHotRestartBuildSessionId">
+		<PropertyGroup>
+			<PkcsAssemblyName>System.Security.Cryptography.Pkcs.dll</PkcsAssemblyName>
+			<PkcsPackageLib>$([System.IO.Path]::Combine('$(USERPROFILE)', '.nuget', 'packages', 'system.security.cryptography.pkcs', '8.0.0', 'lib'))</PkcsPackageLib>
+			<HotRestartBaseDir>$([System.IO.Path]::Combine($(LOCALAPPDATA), 'Xamarin', 'HotRestart'))</HotRestartBaseDir>
+			<HotRestartSigningAppBundleDir>$([System.IO.Path]::Combine('$(HotRestartBaseDir)', 'Signing', '$(AssemblyName).app'))</HotRestartSigningAppBundleDir>
+		</PropertyGroup>
+
+		<!-- Find the DLL -->
+		<PropertyGroup>
+			<PkcsSourcePath Condition="Exists('$(OutputPath)$(PkcsAssemblyName)')">$(OutputPath)$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)</PkcsSourcePath>
+		</PropertyGroup>
+
+		<!-- Copy to all Hot Restart locations -->
+		<ItemGroup Condition="'$(PkcsSourcePath)'!=''">
+			<PkcsVeryEarlyDestinations Include="$(HotRestartAppBundlePath)" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<PkcsVeryEarlyDestinations Include="$(HotRestartAppBundlePath)out\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<PkcsVeryEarlyDestinations Include="$(HotRestartSigningAppBundleDir)\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+			<PkcsVeryEarlyDestinations Include="$(HotRestartSigningAppBundleDir)\out\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+			<PkcsVeryEarlyDestinations Include="$(HotRestartBaseDir)\" Condition="'$(HotRestartBaseDir)'!=''" />
+		</ItemGroup>
+
+		<MakeDir Directories="@(PkcsVeryEarlyDestinations)" Condition="@(PkcsVeryEarlyDestinations->Count()) &gt; 0" />
+		<Copy SourceFiles="$(PkcsSourcePath)" DestinationFiles="%(PkcsVeryEarlyDestinations.Identity)$(PkcsAssemblyName)" SkipUnchangedFiles="true" Condition="'$(PkcsSourcePath)'!='' and @(PkcsVeryEarlyDestinations->Count()) &gt; 0" />
+	</Target>
+
+	<!-- Copy PKCS DLL early in Hot Restart process, before signing tool needs it -->
+	<Target Name="EnsurePkcsForHotRestartEarly" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" BeforeTargets="_PrepareHotRestartApp">
+		<PropertyGroup>
+			<PkcsAssemblyName>System.Security.Cryptography.Pkcs.dll</PkcsAssemblyName>
+			<PkcsPackageLib>$([System.IO.Path]::Combine('$(USERPROFILE)', '.nuget', 'packages', 'system.security.cryptography.pkcs', '8.0.0', 'lib'))</PkcsPackageLib>
+		</PropertyGroup>
+
+		<!-- Find the DLL - prefer output directory, then NuGet -->
+		<PropertyGroup>
+			<PkcsSourcePath Condition="Exists('$(OutputPath)$(PkcsAssemblyName)')">$(OutputPath)$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)</PkcsSourcePath>
+			<PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)</PkcsSourcePath>
+		</PropertyGroup>
+
+		<!-- Copy to Hot Restart directories if found -->
+		<PropertyGroup Condition="'$(PkcsSourcePath)'!=''">
+			<HotRestartBaseDir>$([System.IO.Path]::Combine($(LOCALAPPDATA), 'Xamarin', 'HotRestart'))</HotRestartBaseDir>
+			<HotRestartSigningAppBundleDir>$([System.IO.Path]::Combine('$(HotRestartBaseDir)', 'Signing', '$(AssemblyName).app'))</HotRestartSigningAppBundleDir>
+		</PropertyGroup>
+
+		<ItemGroup Condition="'$(PkcsSourcePath)'!=''">
+			<PkcsEarlyDestinations Include="$(HotRestartAppBundlePath)" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<PkcsEarlyDestinations Include="$(HotRestartAppBundlePath)out\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+			<PkcsEarlyDestinations Include="$(HotRestartSigningAppBundleDir)\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+			<PkcsEarlyDestinations Include="$(HotRestartSigningAppBundleDir)\out\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+		</ItemGroup>
+
+		<MakeDir Directories="@(PkcsEarlyDestinations)" Condition="@(PkcsEarlyDestinations->Count()) &gt; 0" />
+		<Copy SourceFiles="$(PkcsSourcePath)" DestinationFiles="%(PkcsEarlyDestinations.Identity)$(PkcsAssemblyName)" SkipUnchangedFiles="true" Condition="'$(PkcsSourcePath)'!='' and @(PkcsEarlyDestinations->Count()) &gt; 0" />
+	</Target>
+
+	<Target Name="EnsurePkcsForHotRestart" Condition="'$(TargetFramework)'=='net9.0-ios' and '$(IsHotRestartBuild)'=='true'" AfterTargets="_PrepareHotRestartApp" BeforeTargets="_CodesignHotRestartAppBundle">
+    <PropertyGroup>
+        <PkcsAssemblyName>System.Security.Cryptography.Pkcs.dll</PkcsAssemblyName>
+        <PkcsPackageLib>$([System.IO.Path]::Combine('$(USERPROFILE)', '.nuget', 'packages', 'system.security.cryptography.pkcs', '8.0.0', 'lib'))</PkcsPackageLib>
+    </PropertyGroup>
+
+    <!-- Find the DLL - always use net8.0 as it exists -->
+    <PropertyGroup>
+        <PkcsSourcePath Condition="Exists('$(OutputPath)$(PkcsAssemblyName)')">$(OutputPath)$(PkcsAssemblyName)</PkcsSourcePath>
+        <PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)</PkcsSourcePath>
+        <PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\net9.0\$(PkcsAssemblyName)</PkcsSourcePath>
+        <PkcsSourcePath Condition="'$(PkcsSourcePath)'=='' and Exists('$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)')">$(PkcsPackageLib)\netstandard2.0\$(PkcsAssemblyName)</PkcsSourcePath>
+    </PropertyGroup>
+    
+    <!-- Fallback to net8.0 if nothing found -->
+    <PropertyGroup Condition="'$(PkcsSourcePath)'==''">
+        <PkcsSourcePath>$(PkcsPackageLib)\net8.0\$(PkcsAssemblyName)</PkcsSourcePath>
+    </PropertyGroup>
+    
+    <Error Text="[HotRestart] FATAL: Could not find $(PkcsAssemblyName) at $(PkcsSourcePath). Build cannot continue." Condition="'$(PkcsSourcePath)'!='' and !Exists('$(PkcsSourcePath)')" />
+
+    <PropertyGroup>
+        <HotRestartBaseDir>$([System.IO.Path]::Combine($(LOCALAPPDATA), 'Xamarin', 'HotRestart'))</HotRestartBaseDir>
+        <HotRestartSigningAppBundleDir>$([System.IO.Path]::Combine('$(HotRestartBaseDir)', 'Signing', '$(AssemblyName).app'))</HotRestartSigningAppBundleDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PkcsDestinations Include="$(HotRestartAppBundlePath)" Condition="'$(HotRestartAppBundlePath)'!=''" />
+        <PkcsDestinations Include="$(HotRestartAppBundlePath)out\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+        <PkcsDestinations Include="$(HotRestartAppBundlePath)out\Payload\$(AssemblyName).app\" Condition="'$(HotRestartAppBundlePath)'!=''" />
+        <PkcsDestinations Include="$(HotRestartSignedAppOutputDir)" Condition="'$(HotRestartSignedAppOutputDir)'!=''" />
+        <PkcsDestinations Include="$(HotRestartSignedAppDir)" Condition="'$(HotRestartSignedAppDir)'!=''" />
+        <PkcsDestinations Include="$(HotRestartContentDir)" Condition="'$(HotRestartContentDir)'!=''" />
+        <PkcsDestinations Include="$(HotRestartSigningAppBundleDir)\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+        <PkcsDestinations Include="$(HotRestartSigningAppBundleDir)\out\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+        <PkcsDestinations Include="$(HotRestartSigningAppBundleDir)\out\Payload\$(AssemblyName).app\" Condition="'$(HotRestartSigningAppBundleDir)'!=''" />
+    </ItemGroup>
+
+    <MakeDir Directories="@(PkcsDestinations)" Condition="@(PkcsDestinations->Count()) &gt; 0" />
+
+    <Copy SourceFiles="$(PkcsSourcePath)" DestinationFiles="%(PkcsDestinations.Identity)$(PkcsAssemblyName)" SkipUnchangedFiles="true" Condition="'$(PkcsSourcePath)'!='' and Exists('$(PkcsSourcePath)') and @(PkcsDestinations->Count()) &gt; 0" />
+</Target>
 
 </Project>

@@ -1,4 +1,5 @@
 using SQLite;
+using System.Collections.ObjectModel;
 
 namespace PhotoJobApp.Models
 {
@@ -7,6 +8,9 @@ namespace PhotoJobApp.Models
     {
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
+
+        // Cloud ID for Firebase Realtime Database synchronization
+        public string? CloudId { get; set; }
 
         [MaxLength(100)]
         public string Name { get; set; } = string.Empty;
@@ -46,33 +50,15 @@ namespace PhotoJobApp.Models
 
         // Computed properties
         [Ignore]
-        public string FormattedCreatedDate => CreatedDate.ToString("MMM dd, yyyy");
+        public ObservableCollection<CustomField> CustomFieldsList { get; set; } = new ObservableCollection<CustomField>();
 
         [Ignore]
-        public List<string> StatusList => StatusOptions.Split(',').Select(s => s.Trim()).ToList();
+        public string FormattedCreatedDate => CreatedDate.ToString("MMMM dd, yyyy");
 
         [Ignore]
-        public List<CustomField> CustomFieldsList
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(CustomFields))
-                    return new List<CustomField>();
-                
-                try
-                {
-                    return System.Text.Json.JsonSerializer.Deserialize<List<CustomField>>(CustomFields) ?? new List<CustomField>();
-                }
-                catch
-                {
-                    return new List<CustomField>();
-                }
-            }
-            set
-            {
-                CustomFields = System.Text.Json.JsonSerializer.Serialize(value);
-            }
-        }
+        public List<string> StatusList => string.IsNullOrEmpty(StatusOptions) 
+            ? new List<string> { "Pending" } 
+            : StatusOptions.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
     }
 
     public class CustomField

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage x:Class="PhotoJobApp.LogViewerPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             Title="App Logs"
+             BackgroundColor="{AppThemeBinding Light=White, Dark=#1C1C1E}">
+    
+    <Grid RowDefinitions="Auto,*" Padding="10">
+        <!-- Header with refresh button -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+            <Label Grid.Column="0"
+                   Text="Application Logs"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   VerticalOptions="Center"
+                   TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+            
+            <Button Grid.Column="1"
+                    Text="Refresh"
+                    Clicked="OnRefreshClicked"
+                    Padding="15,5"
+                    BackgroundColor="{AppThemeBinding Light=#007AFF, Dark=#0A84FF}"
+                    TextColor="White" />
+        </Grid>
+        
+        <!-- Log content -->
+        <ScrollView Grid.Row="1">
+            <Label x:Name="LogContentLabel"
+                   Text="Loading logs..."
+                   FontFamily="Courier"
+                   FontSize="12"
+                   TextColor="{AppThemeBinding Light=Black, Dark=White}"
+                   VerticalOptions="Start"
+                   HorizontalOptions="Start" />
+        </ScrollView>
+    </Grid>
+</ContentPage>
+

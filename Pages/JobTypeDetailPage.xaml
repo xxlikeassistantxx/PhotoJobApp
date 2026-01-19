@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoJobApp.JobTypeDetailPage"
+             xmlns:models="clr-namespace:PhotoJobApp.Models"
+             x:DataType="models:JobType"
+             Title="{Binding Name}"
+             BackgroundColor="#F0F0F0">
+
+    <ScrollView>
+        <StackLayout Padding="10" Spacing="10">
+
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="5">
+                    <Label Grid.RowSpan="2" Text="{Binding Icon}" FontSize="48" VerticalOptions="Center" Margin="0,0,15,0"/>
+                    <Label Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontSize="24" FontAttributes="Bold"/>
+                    <Label Grid.Row="1" Grid.Column="1" Text="{Binding Description}" FontSize="14" TextColor="#666666"/>
+                </Grid>
+            </Frame>
+
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Spacing="10">
+                    <Label Text="Enabled Features" FontSize="18" FontAttributes="Bold"/>
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="5" ColumnSpacing="20">
+                        <Label Grid.Row="0" Grid.Column="0" Text="✓ Photos" IsVisible="{Binding HasPhotos}"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="✓ Location" IsVisible="{Binding HasLocation}"/>
+                        <Label Grid.Row="1" Grid.Column="0" Text="✓ Client Info" IsVisible="{Binding HasClientInfo}"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="✓ Pricing" IsVisible="{Binding HasPricing}"/>
+                        <Label Grid.Row="2" Grid.Column="0" Text="✓ Due Date" IsVisible="{Binding HasDueDate}"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="✓ Status" IsVisible="{Binding HasStatus}"/>
+                        <Label Grid.Row="3" Grid.Column="0" Text="✓ Notes" IsVisible="{Binding HasNotes}"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="✓ Urgent Flag" IsVisible="{Binding HasUrgentFlag}"/>
+                    </Grid>
+                </StackLayout>
+            </Frame>
+
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Spacing="10">
+                    <Label Text="Status Options" FontSize="18" FontAttributes="Bold"/>
+                    <Label Text="{Binding StatusOptions}" LineBreakMode="WordWrap"/>
+                </StackLayout>
+            </Frame>
+
+            <Frame Padding="15" CornerRadius="10" BackgroundColor="White">
+                <StackLayout Spacing="10">
+                    <Label Text="Custom Fields" FontSize="18" FontAttributes="Bold"/>
+                    <CollectionView ItemsSource="{Binding CustomFieldsList}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:CustomField">
+                                <StackLayout Padding="0,5">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold"/>
+                                    <Label FontSize="12" TextColor="#666666">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="{Binding Type, StringFormat='Type: {0}'}"/>
+                                                <Span Text=" | "/>
+                                                <Span Text="{Binding Required, StringFormat='Required: {0}'}"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                </StackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+            </Frame>
+            
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                <Button Grid.Column="0" Text="Edit" Clicked="OnEditClicked" BackgroundColor="#5A67D8" TextColor="White"/>
+                <Button Grid.Column="1" Text="Create" Clicked="OnCreateJobClicked" BackgroundColor="#38A169" TextColor="White"/>
+                <Button Grid.Column="2" Text="☁️ Push" Clicked="OnPushToCloudClicked" BackgroundColor="#3182CE" TextColor="White"/>
+                <Button Grid.Column="3" Text="Delete" Clicked="OnDeleteClicked" BackgroundColor="#E53E3E" TextColor="White"/>
+            </Grid>
+            
+        </StackLayout>
+    </ScrollView>
+</ContentPage> 
