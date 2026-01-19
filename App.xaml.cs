@@ -1,8 +1,9 @@
-﻿using PhotoJobApp.Services;
+using PhotoJobApp.Services;
 #if IOS
 using Foundation;
 using Microsoft.Maui.Authentication;
 #endif
+using System.Threading;
 
 namespace PhotoJobApp;
 
@@ -45,16 +46,25 @@ public partial class App : Application
 			{
 				try
 				{
-					isAuthenticated = _authService.IsAuthenticated();
-
-					if (!isAuthenticated)
+					// First check if there's stored auth data (quick check)
+					var hasStoredAuth = _authService.IsAuthenticated();
+					
+					if (hasStoredAuth)
 					{
-						var storedUser = _authService.GetCurrentUserAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-						if (storedUser != null)
-						{
-							isAuthenticated = true;
-							Preferences.Set("IsAuthenticated", true);
-						}
+						// Verify the token is still valid (similar to React Native's onAuthStateChanged)
+						// This ensures authentication persists correctly after app refresh
+						// Note: We do this asynchronously after window creation to avoid blocking
+						System.Diagnostics.Debug.WriteLine("Found stored auth data, will verify token validity after window creation");
+						Console.WriteLine("Found stored auth data, will verify token validity after window creation");
+						
+						// For now, trust stored state - verification will happen in LoginPage.OnAppearing
+						// This implements the AuthStateListener pattern from the video
+						isAuthenticated = hasStoredAuth;
+					}
+					else
+					{
+						System.Diagnostics.Debug.WriteLine("No stored auth data found, will show LoginPage");
+						Console.WriteLine("No stored auth data found, will show LoginPage");
 					}
 				}
 				catch (Exception ex)
@@ -84,6 +94,47 @@ public partial class App : Application
 					window = new Window(appShell);
 					System.Diagnostics.Debug.WriteLine("AppShell window created successfully");
 					Console.WriteLine("AppShell window created successfully");
+					
+					// Verify token validity in background (similar to React Native's onAuthStateChanged)
+					// This ensures authentication persists correctly after app refresh
+					_ = Task.Run(async () =>
+					{
+						try
+						{
+							await Task.Delay(500); // Small delay to let window initialize
+							if (_authService != null)
+							{
+								var (isValid, user) = await _authService.CheckAuthStateAsync();
+								if (!isValid || user == null)
+								{
+									System.Diagnostics.Debug.WriteLine("✗ Token verification failed after app start - user not authenticated");
+									Console.WriteLine("✗ Token verification failed after app start - user not authenticated");
+									
+									// Navigate to login page if token is invalid
+									MainThread.BeginInvokeOnMainThread(() =>
+									{
+										if (window.Page is AppShell)
+										{
+											System.Diagnostics.Debug.WriteLine("Navigating to LoginPage due to invalid token");
+											Console.WriteLine("Navigating to LoginPage due to invalid token");
+											var loginPage = new LoginPage(_authService);
+											window.Page = loginPage;
+										}
+									});
+								}
+								else
+								{
+									System.Diagnostics.Debug.WriteLine($"✓ Token verified after app start - user authenticated: {user.Email}");
+									Console.WriteLine($"✓ Token verified after app start - user authenticated: {user.Email}");
+								}
+							}
+						}
+						catch (Exception verifyEx)
+						{
+							System.Diagnostics.Debug.WriteLine($"Error verifying token after app start: {verifyEx.Message}");
+							Console.WriteLine($"Error verifying token after app start: {verifyEx.Message}");
+						}
+					});
 				}
 				catch (Exception ex)
 				{
@@ -130,25 +181,24 @@ public partial class App : Application
 					await CheckAndProcessPendingCallback();
 				});
 			
+			// Listen for notification to resume OAuth flow (when app was terminated during OAuth)
+			NSNotificationCenter.DefaultCenter.AddObserver(
+				new NSString("ResumeOAuthFlow"),
+				async (notification) =>
+				{
+					System.Diagnostics.Debug.WriteLine("Received ResumeOAuthFlow notification - will resume when user taps Sign in with Google");
+					Console.WriteLine("Received ResumeOAuthFlow notification - will resume when user taps Sign in with Google");
+					// The OAuth URL is already stored, so when user taps the button, it will use the stored URL
+					// We could show a message here, but it's better to just let them tap the button
+				});
+			
 			// Check for pending OAuth callback (in case app was terminated during sign-in)
-			// Check immediately and then periodically
+			// Only check once on startup, not periodically (prevents UI blinking)
 			_ = Task.Run(async () =>
 			{
 				try
 				{
-					// Check immediately (no delay)
-					await CheckAndProcessPendingCallback();
-					
-					// Also check after a short delay (in case callback arrives slightly later)
-					await Task.Delay(1000);
-					await CheckAndProcessPendingCallback();
-					
-					// Check one more time after 3 seconds (for callbacks that arrive after app restart)
-					await Task.Delay(2000);
-					await CheckAndProcessPendingCallback();
-					
-					// Check again after 5 seconds total (for very delayed callbacks)
-					await Task.Delay(2000);
+					// Single check on startup - LoginPage will handle additional checks if needed
 					await CheckAndProcessPendingCallback();
 				}
 				catch (Exception ex)
@@ -160,20 +210,17 @@ public partial class App : Application
 			
 			// Also check when window resumes (in case callback arrives while app is in background)
 			// This implements AuthStateListener pattern by checking auth state on resume
+			// Reduced frequency to prevent UI blinking
 			window.Resumed += (sender, e) =>
 			{
 				_ = Task.Run(async () =>
 				{
-					System.Diagnostics.Debug.WriteLine("Window resumed - aggressively checking for pending callback and auth state");
-					Console.WriteLine("Window resumed - aggressively checking for pending callback and auth state");
+					System.Diagnostics.Debug.WriteLine("Window resumed - checking for pending callback and auth state");
+					Console.WriteLine("Window resumed - checking for pending callback and auth state");
 					
-					// Aggressively check for pending OAuth callback multiple times
-					// This handles callbacks that arrive after the app resumes
-					for (int i = 0; i < 5; i++)
-					{
-						await Task.Delay(i * 500); // 0ms, 500ms, 1000ms, 1500ms, 2000ms
-						await CheckAndProcessPendingCallback();
-					}
+					// Check for pending OAuth callback once (not multiple times)
+					await Task.Delay(500); // Small delay to let window fully resume
+					await CheckAndProcessPendingCallback();
 					
 					// Then verify authentication state (AuthStateListener pattern)
 					if (_authService != null)

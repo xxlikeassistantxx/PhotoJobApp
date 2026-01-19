@@ -20,6 +20,8 @@ namespace PhotoJobApp
         public ICommand RefreshCommand { get; }
         public ICommand PushAllCommand { get; }
         public ICommand PullAllCommand { get; }
+        public ICommand PullJobTypeCommand { get; }
+        public ICommand PullJobCommand { get; }
         public ICommand DeleteJobTypeCommand { get; }
         public ICommand DeleteJobCommand { get; }
 
@@ -30,6 +32,8 @@ namespace PhotoJobApp
             RefreshCommand = new Command(async () => await LoadCloudDataAsync());
             PushAllCommand = new Command(async () => await PushAllToCloudAsync());
             PullAllCommand = new Command(async () => await PullAllFromCloudAsync());
+            PullJobTypeCommand = new Command<JobType>(async (jobType) => await PullJobTypeFromCloudAsync(jobType));
+            PullJobCommand = new Command<PhotoJob>(async (job) => await PullJobFromCloudAsync(job));
             DeleteJobTypeCommand = new Command<JobType>(async (jobType) => 
             {
                 System.Diagnostics.Debug.WriteLine($"CloudManagementPage: DeleteJobTypeCommand triggered for job type: {jobType?.Name ?? "null"}");
@@ -60,16 +64,33 @@ namespace PhotoJobApp
                 }
             }
 
-            var currentUser = await _authService.GetCurrentUserAsync();
+            // Check and refresh auth state to ensure we have a valid token
+            var (isAuthenticated, currentUser) = await _authService.CheckAuthStateAsync();
+            
+            if (!isAuthenticated || currentUser == null)
+            {
+                // Try to get from local storage as fallback
+                currentUser = await _authService.GetCurrentUserAsync();
+            }
+            
+            // If still no user or no token, try to refresh
+            if (currentUser != null && string.IsNullOrEmpty(currentUser.IdToken) && !string.IsNullOrEmpty(currentUser.RefreshToken))
+            {
+                currentUser = await _authService.RefreshIdTokenAsync(currentUser.RefreshToken);
+            }
+
             if (currentUser == null)
             {
                 await DisplayAlert("Error", "You must be signed in to use cloud features", "OK");
                 return;
             }
 
-            // Initialize services with user ID
-            _cloudJobTypeService = new CloudJobTypeService(currentUser.Id);
-            _cloudJobService = new CloudJobService(currentUser.Id);
+            // Get the ID token for proper Firebase authentication
+            var idToken = currentUser.IdToken;
+
+            // Initialize services with user ID and ID token
+            _cloudJobTypeService = new CloudJobTypeService(currentUser.Id, idToken);
+            _cloudJobService = new CloudJobService(currentUser.Id, idToken);
             _jobTypeService = await JobTypeService.CreateAsync(currentUser.Id);
             _photoJobService = new PhotoJobService();
         }
@@ -189,19 +210,32 @@ namespace PhotoJobApp
                 var result = await DisplayAlert("Confirm", "Push all local job types and jobs to cloud?", "Yes", "No");
                 if (!result) return;
 
-                // Get current user ID
-                var currentUser = await _authService.GetCurrentUserAsync();
+                // Check and refresh auth state to ensure we have a valid token
+                var (isAuthenticated, currentUser) = await _authService.CheckAuthStateAsync();
+                
+                if (!isAuthenticated || currentUser == null)
+                {
+                    currentUser = await _authService.GetCurrentUserAsync();
+                }
+                
+                if (currentUser != null && string.IsNullOrEmpty(currentUser.IdToken) && !string.IsNullOrEmpty(currentUser.RefreshToken))
+                {
+                    currentUser = await _authService.RefreshIdTokenAsync(currentUser.RefreshToken);
+                }
+
                 if (currentUser == null)
                 {
                     await DisplayAlert("Error", "You must be signed in to use cloud features", "OK");
                     return;
                 }
 
+                var idToken = currentUser.IdToken;
+
                 // Initialize cloud services if needed
                 if (_cloudJobTypeService == null || _cloudJobService == null)
                 {
-                    _cloudJobTypeService = new CloudJobTypeService(currentUser.Id);
-                    _cloudJobService = new CloudJobService(currentUser.Id);
+                    _cloudJobTypeService = new CloudJobTypeService(currentUser.Id, idToken);
+                    _cloudJobService = new CloudJobService(currentUser.Id, idToken);
                 }
 
                 // Create services with user ID
@@ -247,23 +281,36 @@ namespace PhotoJobApp
                 // Initialize services if needed
                 await InitializeServicesAsync();
 
-                // Get current user ID
-                var currentUser = await _authService.GetCurrentUserAsync();
+                // Check and refresh auth state to ensure we have a valid token
+                var (isAuthenticated, currentUser) = await _authService.CheckAuthStateAsync();
+                
+                if (!isAuthenticated || currentUser == null)
+                {
+                    currentUser = await _authService.GetCurrentUserAsync();
+                }
+                
+                if (currentUser != null && string.IsNullOrEmpty(currentUser.IdToken) && !string.IsNullOrEmpty(currentUser.RefreshToken))
+                {
+                    currentUser = await _authService.RefreshIdTokenAsync(currentUser.RefreshToken);
+                }
+
                 if (currentUser == null)
                 {
                     await DisplayAlert("Error", "You must be signed in to use cloud features", "OK");
                     return;
                 }
 
+                var idToken = currentUser.IdToken;
+
                 // Initialize cloud services if needed
                 if (_cloudJobTypeService == null || _cloudJobService == null)
                 {
-                    _cloudJobTypeService = new CloudJobTypeService(currentUser.Id);
-                    _cloudJobService = new CloudJobService(currentUser.Id);
+                    _cloudJobTypeService = new CloudJobTypeService(currentUser.Id, idToken);
+                    _cloudJobService = new CloudJobService(currentUser.Id, idToken);
                 }
 
-                // Create services with user ID
-                var jobTypeService = await JobTypeService.CreateAsync(currentUser.Id);
+                // Create services with user ID and ID token
+                var jobTypeService = await JobTypeService.CreateAsync(currentUser.Id, idToken);
                 var photoJobService = _photoJobService ?? new PhotoJobService();
 
                 // Pull job types
@@ -369,6 +416,87 @@ namespace PhotoJobApp
             }
         }
 
+        private async Task PullJobTypeFromCloudAsync(JobType jobType)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(jobType.CloudId))
+                {
+                    await DisplayAlert("Error", "Job type has no cloud ID", "OK");
+                    return;
+                }
+
+                // Initialize services if needed
+                await InitializeServicesAsync();
+
+                // Check if already exists locally
+                var localJobTypes = await _jobTypeService.GetJobTypesAsync();
+                var exists = localJobTypes.Any(lt => lt.CloudId == jobType.CloudId);
+                
+                if (exists)
+                {
+                    await DisplayAlert("Info", $"Job type '{jobType.Name}' already exists locally", "OK");
+                    return;
+                }
+
+                // Reset ID so it gets a new local ID
+                jobType.Id = 0;
+                
+                // Save to local database
+                await _jobTypeService.SaveJobTypeAsync(jobType);
+                
+                await DisplayAlert("Success", $"Job type '{jobType.Name}' pulled from cloud successfully", "OK");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CloudManagementPage: Error pulling job type: {ex.Message}");
+                Console.WriteLine($"CloudManagementPage: Error pulling job type: {ex.Message}");
+                await DisplayAlert("Error", $"Failed to pull job type: {ex.Message}", "OK");
+            }
+        }
+
+        private async Task PullJobFromCloudAsync(PhotoJob job)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(job.CloudId))
+                {
+                    await DisplayAlert("Error", "Job has no cloud ID", "OK");
+                    return;
+                }
+
+                // Initialize services if needed
+                if (_photoJobService == null)
+                {
+                    _photoJobService = new PhotoJobService();
+                }
+
+                // Check if already exists locally
+                var localJobs = await _photoJobService.GetJobsAsync();
+                var exists = localJobs.Any(j => j.CloudId == job.CloudId);
+                
+                if (exists)
+                {
+                    await DisplayAlert("Info", $"Job '{job.Title}' already exists locally", "OK");
+                    return;
+                }
+
+                // Reset ID so it gets a new local ID
+                job.Id = 0;
+                
+                // Save to local database
+                await _photoJobService.SaveJobAsync(job);
+                
+                await DisplayAlert("Success", $"Job '{job.Title}' pulled from cloud successfully", "OK");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CloudManagementPage: Error pulling job: {ex.Message}");
+                Console.WriteLine($"CloudManagementPage: Error pulling job: {ex.Message}");
+                await DisplayAlert("Error", $"Failed to pull job: {ex.Message}", "OK");
+            }
+        }
+
         private async Task DeleteJobFromCloudAsync(PhotoJob job)
         {
             try
@@ -382,13 +510,26 @@ namespace PhotoJobApp
                     // Initialize cloud service if needed
                     if (_cloudJobService == null)
                     {
-                        var currentUser = await _authService.GetCurrentUserAsync();
+                        var (isAuthenticated, currentUser) = await _authService.CheckAuthStateAsync();
+                        
+                        if (!isAuthenticated || currentUser == null)
+                        {
+                            currentUser = await _authService.GetCurrentUserAsync();
+                        }
+                        
+                        if (currentUser != null && string.IsNullOrEmpty(currentUser.IdToken) && !string.IsNullOrEmpty(currentUser.RefreshToken))
+                        {
+                            currentUser = await _authService.RefreshIdTokenAsync(currentUser.RefreshToken);
+                        }
+
                         if (currentUser == null)
                         {
                             await DisplayAlert("Error", "You must be signed in to use cloud features", "OK");
                             return;
                         }
-                        _cloudJobService = new CloudJobService(currentUser.Id);
+                        
+                        var idToken = currentUser.IdToken;
+                        _cloudJobService = new CloudJobService(currentUser.Id, idToken);
                     }
 
                     await _cloudJobService.DeleteJobAsync(job.CloudId);

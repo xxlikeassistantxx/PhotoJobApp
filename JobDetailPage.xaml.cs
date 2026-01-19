@@ -1,5 +1,6 @@
 using PhotoJobApp.Models;
 using PhotoJobApp.Services;
+using System.Text.Json;
 
 namespace PhotoJobApp
 {
@@ -7,7 +8,9 @@ namespace PhotoJobApp
     public partial class JobDetailPage : ContentPage
     {
         private readonly PhotoJobService _photoJobService;
+        private JobTypeService _jobTypeService;
         private PhotoJob _job;
+        private JobType _jobType;
 
         public string JobId
         {
@@ -35,11 +38,182 @@ namespace PhotoJobApp
                 {
                     _job = job;
                     BindingContext = _job;
+                    
+                    // Initialize job type service and load job type
+                    await InitializeJobTypeServiceAsync();
+                    
+                    if (_job.JobTypeId > 0 && _jobTypeService != null)
+                    {
+                        _jobType = await _jobTypeService.GetJobTypeAsync(_job.JobTypeId);
+                        if (_jobType != null)
+                        {
+                            UpdateFieldVisibility();
+                            UpdateCustomFields();
+                        }
+                    }
+                    else
+                    {
+                        // If no job type, show all fields for backward compatibility
+                        ShowAllFields();
+                    }
                 }
             }
             catch (Exception ex)
             {
                 await DisplayAlert("Error", $"Failed to load job: {ex.Message}", "OK");
+            }
+        }
+
+        private async Task InitializeJobTypeServiceAsync()
+        {
+            if (_jobTypeService == null)
+            {
+                try
+                {
+                    var authService = new FirebaseAuthService();
+                    var currentUser = await authService.GetCurrentUserAsync();
+                    var userId = currentUser?.Id;
+                    _jobTypeService = await JobTypeService.CreateAsync(userId);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error initializing JobTypeService: {ex.Message}");
+                    _jobTypeService = await JobTypeService.CreateAsync(null);
+                }
+            }
+        }
+
+        private void ShowAllFields()
+        {
+            if (ClientInfoSection != null) ClientInfoSection.IsVisible = true;
+            if (PricingSection != null) PricingSection.IsVisible = true;
+            if (StatusSection != null) StatusSection.IsVisible = true;
+            if (DueDateSection != null) DueDateSection.IsVisible = true;
+            if (LocationSection != null) LocationSection.IsVisible = true;
+            if (PhotosSection != null) PhotosSection.IsVisible = _job?.PhotoList?.Count > 0;
+            if (NotesSection != null) NotesSection.IsVisible = true;
+            if (UrgentSection != null) UrgentSection.IsVisible = true;
+            // Description is always shown if it has content
+            if (DescriptionSection != null) DescriptionSection.IsVisible = !string.IsNullOrEmpty(_job?.Description);
+            if (CustomFieldsSection != null) CustomFieldsSection.IsVisible = false;
+        }
+
+        private void UpdateFieldVisibility()
+        {
+            if (_jobType == null)
+            {
+                ShowAllFields();
+                return;
+            }
+
+            // Show/hide sections based on job type features
+            if (ClientInfoSection != null)
+                ClientInfoSection.IsVisible = _jobType.HasClientInfo;
+            
+            if (PricingSection != null)
+                PricingSection.IsVisible = _jobType.HasPricing;
+            
+            if (StatusSection != null)
+                StatusSection.IsVisible = _jobType.HasStatus;
+            
+            if (DueDateSection != null)
+                DueDateSection.IsVisible = _jobType.HasDueDate;
+            
+            if (LocationSection != null)
+                LocationSection.IsVisible = _jobType.HasLocation;
+            
+            if (PhotosSection != null)
+                PhotosSection.IsVisible = _jobType.HasPhotos && (_job?.PhotoList?.Count > 0);
+            
+            if (NotesSection != null)
+                NotesSection.IsVisible = _jobType.HasNotes;
+            
+            if (UrgentSection != null)
+                UrgentSection.IsVisible = _jobType.HasUrgentFlag;
+            
+            // Description is always shown if it has content
+            if (DescriptionSection != null)
+                DescriptionSection.IsVisible = !string.IsNullOrEmpty(_job?.Description);
+        }
+
+        private void UpdateCustomFields()
+        {
+            if (CustomFieldsContainer == null || _jobType == null) return;
+
+            // Clear existing custom fields
+            CustomFieldsContainer.Children.Clear();
+
+            // Load custom fields from job type
+            if (string.IsNullOrEmpty(_jobType.CustomFields))
+            {
+                if (CustomFieldsSection != null) CustomFieldsSection.IsVisible = false;
+                return;
+            }
+
+            try
+            {
+                var customFields = JsonSerializer.Deserialize<List<CustomField>>(_jobType.CustomFields);
+                if (customFields == null || customFields.Count == 0)
+                {
+                    if (CustomFieldsSection != null) CustomFieldsSection.IsVisible = false;
+                    return;
+                }
+
+                // Load existing values from job
+                Dictionary<string, string> customFieldValues = new();
+                if (!string.IsNullOrEmpty(_job.CustomFieldValues))
+                {
+                    try
+                    {
+                        customFieldValues = JsonSerializer.Deserialize<Dictionary<string, string>>(_job.CustomFieldValues) 
+                            ?? new Dictionary<string, string>();
+                    }
+                    catch
+                    {
+                        customFieldValues = new Dictionary<string, string>();
+                    }
+                }
+
+                if (CustomFieldsSection != null) CustomFieldsSection.IsVisible = true;
+
+                // Create display for each custom field
+                foreach (var field in customFields)
+                {
+                    var fieldContainer = new StackLayout
+                    {
+                        Spacing = 5,
+                        Margin = new Thickness(0, 5, 0, 0)
+                    };
+
+                    var label = new Label
+                    {
+                        Text = field.Name,
+                        FontAttributes = FontAttributes.Bold,
+                        FontSize = 14
+                    };
+                    fieldContainer.Children.Add(label);
+
+                    // Get the value for this field
+                    var value = customFieldValues.ContainsKey(field.Name) 
+                        ? customFieldValues[field.Name] 
+                        : field.DefaultValue ?? "";
+
+                    Label valueLabel = new Label
+                    {
+                        Text = !string.IsNullOrEmpty(value) ? value : "(Not set)",
+                        FontSize = 14,
+                        TextColor = !string.IsNullOrEmpty(value) ? Colors.Black : Colors.Gray,
+                        Margin = new Thickness(10, 0, 0, 0)
+                    };
+                    fieldContainer.Children.Add(valueLabel);
+
+                    CustomFieldsContainer.Children.Add(fieldContainer);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading custom fields: {ex.Message}");
+                if (CustomFieldsSection != null) CustomFieldsSection.IsVisible = false;
             }
         }
 
@@ -52,21 +226,63 @@ namespace PhotoJobApp
                 
                 // Get current user for cloud sync
                 var authService = new FirebaseAuthService();
-                var currentUser = await authService.GetCurrentUserAsync();
+                
+                // Always check and refresh auth state to ensure we have a valid token
+                var (isAuthenticated, currentUser) = await authService.CheckAuthStateAsync();
+                
+                if (!isAuthenticated || currentUser == null)
+                {
+                    // Try to get from local storage as fallback
+                    currentUser = await authService.GetCurrentUserAsync();
+                }
+                
+                // If still no user or no token, try to refresh
+                if (currentUser != null && string.IsNullOrEmpty(currentUser.IdToken) && !string.IsNullOrEmpty(currentUser.RefreshToken))
+                {
+                    currentUser = await authService.RefreshIdTokenAsync(currentUser.RefreshToken);
+                }
+                
                 var userId = currentUser?.Id;
                 
                 if (!string.IsNullOrEmpty(userId))
                 {
-                    var cloudJobService = new CloudJobService(userId);
-                    var success = await cloudJobService.SaveJobAsync(_job);
+                    // Get the ID token for proper Firebase authentication
+                    var idToken = currentUser?.IdToken;
+                    
+                    System.Diagnostics.Debug.WriteLine($"JobDetailPage: UserId: {userId}, HasIdToken: {!string.IsNullOrEmpty(idToken)}, TokenLength: {idToken?.Length ?? 0}");
+                    
+                    if (string.IsNullOrEmpty(idToken))
+                    {
+                        await DisplayAlert("Authentication Error", 
+                            "No valid authentication token found. Please sign out and sign in again.", 
+                            "OK");
+                        return;
+                    }
+                    
+                    var cloudJobService = new CloudJobService(userId, idToken);
+                    
+                    // Save with sharing enabled (will share with linked accounts)
+                    var (success, errorMessage) = await cloudJobService.SaveJobAsync(_job, shareWithLinkedAccounts: true);
                     
                     if (success)
                     {
-                        await DisplayAlert("Success", $"'{_job.Title}' has been pushed to the cloud successfully.", "OK");
+                        // Update local job with cloud ID if needed
+                        if (string.IsNullOrEmpty(_job.CloudId) && _job.Id > 0)
+                        {
+                            _job.CloudId = _job.Id.ToString();
+                            await _photoJobService.SaveJobAsync(_job);
+                        }
+                        
+                        await DisplayAlert("Success", 
+                            $"'{_job.Title}' has been pushed to the cloud successfully and shared with linked accounts.", 
+                            "OK");
                     }
                     else
                     {
-                        await DisplayAlert("Error", "Failed to push job to cloud. Please check your internet connection.", "OK");
+                        var errorMsg = !string.IsNullOrEmpty(errorMessage) 
+                            ? $"Failed to push job to cloud: {errorMessage}" 
+                            : "Failed to push job to cloud. Please check your internet connection and Firebase configuration.";
+                        await DisplayAlert("Error", errorMsg, "OK");
                     }
                 }
                 else
@@ -84,7 +300,7 @@ namespace PhotoJobApp
 
         private async void OnEditClicked(object sender, EventArgs e)
         {
-            await Shell.Current.GoToAsync($"AddEditJobPage?Job={_job.Id}");
+            await Shell.Current.GoToAsync($"///AddEditJobPage?Job={_job.Id}");
         }
 
         private async void OnDeleteClicked(object sender, EventArgs e)

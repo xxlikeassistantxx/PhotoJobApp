@@ -10,6 +10,7 @@ public partial class AddEditJobTypePage : ContentPage
 {
     private JobTypeService _jobTypeService;
     private JobType _jobType;
+    private bool _isEditing = false;
 
     public string JobTypeId
     {
@@ -17,6 +18,7 @@ public partial class AddEditJobTypePage : ContentPage
         {
             if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int id))
             {
+                _isEditing = true;
                 LoadJobTypeAsync(id);
             }
         }
@@ -25,6 +27,12 @@ public partial class AddEditJobTypePage : ContentPage
     public AddEditJobTypePage()
     {
         InitializeComponent();
+        ClearForm();
+    }
+
+    private void ClearForm()
+    {
+        _isEditing = false;
         _jobType = new JobType
         {
             CustomFieldsList = new ObservableCollection<CustomField>(),
@@ -36,9 +44,12 @@ public partial class AddEditJobTypePage : ContentPage
             HasStatus = true,
             HasNotes = true,
             HasUrgentFlag = true,
-            StatusOptions = "Pending,In Progress,Completed,Cancelled"
+            StatusOptions = "Pending,In Progress,Completed,Cancelled",
+            Color = "#512BD4" // Default color
         };
         BindingContext = _jobType;
+        Title = "New Job Type";
+        UpdateColorSelection(_jobType.Color);
     }
 
     private async void LoadJobTypeAsync(int jobTypeId)
@@ -59,6 +70,7 @@ public partial class AddEditJobTypePage : ContentPage
             if (jobType != null)
             {
                 _jobType = jobType;
+                _isEditing = true;
                 if (string.IsNullOrEmpty(_jobType.CustomFields))
                 {
                     _jobType.CustomFieldsList = new ObservableCollection<CustomField>();
@@ -78,6 +90,8 @@ public partial class AddEditJobTypePage : ContentPage
                     }
                 }
                 BindingContext = _jobType;
+                Title = "Edit Job Type";
+                UpdateColorSelection(_jobType.Color);
             }
         }
         catch (Exception ex)
@@ -89,6 +103,8 @@ public partial class AddEditJobTypePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        try
+        {
         if (_jobTypeService == null)
         {
             // Get current user for cloud sync
@@ -97,6 +113,36 @@ public partial class AddEditJobTypePage : ContentPage
             var userId = currentUser?.Id;
             
             _jobTypeService = await JobTypeService.CreateAsync(userId);
+            }
+            
+            // If not editing, ensure form is cleared for new job type entry
+            if (!_isEditing)
+            {
+                ClearForm();
+            }
+            else
+            {
+                // Update color selection if editing
+                if (_jobType != null && !string.IsNullOrEmpty(_jobType.Color))
+                {
+                    UpdateColorSelection(_jobType.Color);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error initializing JobTypeService in OnAppearing: {ex.Message}");
+            Console.WriteLine($"Error initializing JobTypeService in OnAppearing: {ex.Message}");
+            // Try to create service without userId as fallback
+            try
+            {
+                _jobTypeService = await JobTypeService.CreateAsync(null);
+            }
+            catch (Exception fallbackEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"Fallback JobTypeService creation failed: {fallbackEx.Message}");
+                Console.WriteLine($"Fallback JobTypeService creation failed: {fallbackEx.Message}");
+            }
         }
     }
 
@@ -154,53 +200,24 @@ public partial class AddEditJobTypePage : ContentPage
             
             await DisplayAlert("Success", "Job type saved successfully!", "OK");
             
-            try
+            if (_isEditing)
             {
-                // Try Shell navigation first
-                await Shell.Current.GoToAsync("..");
+                // When editing, navigate back to MainPage
+                try
+                {
+                    await Shell.Current.GoToAsync("///MainPage");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Shell navigation failed after save: {ex.Message}");
                 Console.WriteLine($"Shell navigation failed after save: {ex.Message}");
-                
-                // Fallback: Create a new AppShell and set it as the window page
-                try
-                {
-                    if (Application.Current.Windows.Count > 0)
-                    {
-                        var authService = new FirebaseAuthService();
-                        var appShell = new AppShell(authService);
-                        Application.Current.Windows[0].Page = appShell;
-                        
-                        System.Diagnostics.Debug.WriteLine("Save navigation completed via fallback");
-                        Console.WriteLine("Save navigation completed via fallback");
-                    }
-                }
-                catch (Exception fallbackEx)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Save fallback navigation failed: {fallbackEx.Message}");
-                    Console.WriteLine($"Save fallback navigation failed: {fallbackEx.Message}");
-                    
-                    // Final fallback: Go back to MainPage
-                    try
-                    {
-                        if (Application.Current.Windows.Count > 0)
-                        {
-                            var mainPage = new MainPage();
-                            Application.Current.Windows[0].Page = mainPage;
-                            
-                            System.Diagnostics.Debug.WriteLine("Save navigation completed via MainPage fallback");
-                            Console.WriteLine("Save navigation completed via MainPage fallback");
+                    await DisplayAlert("Navigation Error", "Job type saved but unable to navigate. Please use the menu to go back.", "OK");
                         }
                     }
-                    catch (Exception finalEx)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Save final fallback navigation failed: {finalEx.Message}");
-                        Console.WriteLine($"Save final fallback navigation failed: {finalEx.Message}");
-                        await DisplayAlert("Navigation Error", "Job type saved but unable to go back. Please restart the app.", "OK");
-                    }
-                }
+            else
+            {
+                // When creating a new job type, clear the form to allow creating another job type
+                ClearForm();
             }
         }
         catch (Exception ex)
@@ -213,51 +230,14 @@ public partial class AddEditJobTypePage : ContentPage
         {
             try
             {
-                // Try Shell navigation first
-                await Shell.Current.GoToAsync("..");
+                // Navigate to MainPage
+                await Shell.Current.GoToAsync("///MainPage");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Shell navigation failed: {ex.Message}");
                 Console.WriteLine($"Shell navigation failed: {ex.Message}");
-                
-                // Fallback: Create a new AppShell and set it as the window page
-                try
-                {
-                    if (Application.Current.Windows.Count > 0)
-                    {
-                        var authService = new FirebaseAuthService();
-                        var appShell = new AppShell(authService);
-                        Application.Current.Windows[0].Page = appShell;
-                        
-                        System.Diagnostics.Debug.WriteLine("Back navigation completed via fallback");
-                        Console.WriteLine("Back navigation completed via fallback");
-                    }
-                }
-                catch (Exception fallbackEx)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Fallback navigation failed: {fallbackEx.Message}");
-                    Console.WriteLine($"Fallback navigation failed: {fallbackEx.Message}");
-                    
-                    // Final fallback: Go back to MainPage
-                    try
-                    {
-                        if (Application.Current.Windows.Count > 0)
-                        {
-                            var mainPage = new MainPage();
-                            Application.Current.Windows[0].Page = mainPage;
-                            
-                            System.Diagnostics.Debug.WriteLine("Back navigation completed via MainPage fallback");
-                            Console.WriteLine("Back navigation completed via MainPage fallback");
-                        }
-                    }
-                    catch (Exception finalEx)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Final fallback navigation failed: {finalEx.Message}");
-                        Console.WriteLine($"Final fallback navigation failed: {finalEx.Message}");
-                        await DisplayAlert("Navigation Error", "Unable to go back. Please restart the app.", "OK");
-                    }
-                }
+                await DisplayAlert("Navigation Error", "Unable to go back. Please use the menu to navigate.", "OK");
             }
         }
 
@@ -310,6 +290,40 @@ public partial class AddEditJobTypePage : ContentPage
         {
             System.Diagnostics.Debug.WriteLine("Delete custom field: Invalid parameters");
             Console.WriteLine("Delete custom field: Invalid parameters");
+        }
+    }
+
+    private void OnColorSelected(object sender, TappedEventArgs e)
+    {
+        if (sender is Border border && border.Background is SolidColorBrush brush)
+        {
+            // Convert Color to hex string
+            var color = brush.Color;
+            var colorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
+            _jobType.Color = colorHex;
+            UpdateColorSelection(colorHex);
+        }
+    }
+
+    private void UpdateColorSelection(string selectedColor)
+    {
+        // Hide all checkmarks
+        var colorChecks = new[] { 
+            "Color1Check", "Color2Check", "Color3Check", "Color4Check", "Color5Check", "Color6Check",
+            "Color7Check", "Color8Check", "Color9Check", "Color10Check", "Color11Check", "Color12Check"
+        };
+        var colorValues = new[] { 
+            "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD",
+            "#512BD4", "#2196F3", "#4CAF50", "#FF9800", "#E91E63", "#9E9E9E"
+        };
+        
+        for (int i = 0; i < colorChecks.Length; i++)
+        {
+            var checkLabel = this.FindByName<Label>(colorChecks[i]);
+            if (checkLabel != null)
+            {
+                checkLabel.IsVisible = (colorValues[i].Equals(selectedColor, StringComparison.OrdinalIgnoreCase));
+            }
         }
     }
 } 

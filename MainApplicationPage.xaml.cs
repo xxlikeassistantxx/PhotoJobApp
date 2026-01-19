@@ -151,7 +151,7 @@ public partial class MainApplicationPage : ContentPage
 
     private async void OnAddJobClicked(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("AddEditJobPage");
+        await Shell.Current.GoToAsync("///AddEditJobPage");
     }
 
     private async void OnJobTapped(object sender, TappedEventArgs e)
@@ -171,7 +171,7 @@ public partial class MainApplicationPage : ContentPage
             switch (action)
             {
                 case "Edit":
-                    await Shell.Current.GoToAsync($"AddEditJobPage?Job={job.Id}");
+                    await Shell.Current.GoToAsync($"///AddEditJobPage?Job={job.Id}");
                     break;
                 case "Delete":
                     await DeleteJobAsync(job);

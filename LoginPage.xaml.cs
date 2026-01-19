@@ -11,12 +11,15 @@ namespace PhotoJobApp
     public partial class LoginPage : ContentPage
     {
         private readonly FirebaseAuthService _authService;
+        private bool _hasCheckedAuthState = false; // Prevent multiple auth state checks
+        private bool _isCheckingAuthState = false; // Prevent concurrent checks
+        private DateTime _lastFocusTime = DateTime.MinValue; // Track when password field was focused
 #if IOS
 		private const string PendingOAuthCallbackKey = "PendingOAuthCallback";
 		private const string GoogleSignInInProgressKey = "GoogleSignInInProgress";
 		private const string GoogleSignInStartKey = "GoogleSignInStartedUtc";
 		private const string GoogleSignInResumeAttemptsKey = "GoogleSignInResumeAttempts";
-		private bool _resumeAttempted;
+		private NSObject? _oauthCallbackObserver; // Store observer reference for cleanup
 #endif
 
         public LoginPage(FirebaseAuthService authService)
@@ -46,7 +49,15 @@ namespace PhotoJobApp
             
             if (PasswordEntry != null)
             {
+                PasswordEntry.Focused += (sender, e) => {
+                    _lastFocusTime = DateTime.Now;
+                    System.Diagnostics.Debug.WriteLine("Password field focused");
+                };
+                
                 PasswordEntry.TextChanged += (sender, e) => {
+                    // Update focus time on every keystroke to prevent checks while typing
+                    _lastFocusTime = DateTime.Now;
+                    
                     System.Diagnostics.Debug.WriteLine($"Password text changed: length {e.NewTextValue?.Length ?? 0}");
                     Console.WriteLine($"Password text changed: length {e.NewTextValue?.Length ?? 0}");
                     // Only save password if "Remember Me" is checked
@@ -54,6 +65,13 @@ namespace PhotoJobApp
                     {
                         Preferences.Set("LoginPage_Password", e.NewTextValue);
                     }
+                };
+            }
+            
+            if (EmailEntry != null)
+            {
+                EmailEntry.Focused += (sender, e) => {
+                    _lastFocusTime = DateTime.Now;
                 };
             }
             
@@ -78,6 +96,76 @@ namespace PhotoJobApp
                     }
                 };
             }
+            
+            #if IOS
+            // Listen for OAuth callback notification from AppDelegate
+            // This handles the case when the app restarts during OAuth (e.g., during 2FA)
+            _oauthCallbackObserver = NSNotificationCenter.DefaultCenter.AddObserver(
+                new NSString("PendingOAuthCallbackFound"),
+                async (notification) =>
+                {
+                    System.Diagnostics.Debug.WriteLine("LoginPage: Received PendingOAuthCallbackFound notification");
+                    Console.WriteLine("LoginPage: Received PendingOAuthCallbackFound notification");
+                    
+                    try
+                    {
+                        var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+                        userDefaults.Synchronize();
+                        var url = userDefaults.StringForKey("PendingOAuthCallback");
+                        
+                        if (!string.IsNullOrEmpty(url))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"LoginPage: Found stored callback URL, processing...");
+                            Console.WriteLine($"LoginPage: Found stored callback URL, processing...");
+                            
+                            // Clear it so we don't process it twice
+                            userDefaults.RemoveObject("PendingOAuthCallback");
+                            userDefaults.SetBool(false, "GoogleSignInInProgress");
+                            userDefaults.Synchronize();
+                            
+                            // Process the callback URL
+                            var result = await _authService.ParseCallbackUrlAsync(url);
+                            
+                            if (result.success && result.user != null)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"LoginPage: OAuth callback processed successfully, signing in user: {result.user.Email}");
+                                Console.WriteLine($"LoginPage: OAuth callback processed successfully, signing in user: {result.user.Email}");
+                                
+                                // Save authentication state
+                                Preferences.Set("IsAuthenticated", true);
+                                Preferences.Set("UserId", result.user.Id);
+                                Preferences.Set("UserEmail", result.user.Email ?? "");
+                                
+                                // Navigate to main app
+                                await NavigateToMainApp();
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"LoginPage: OAuth callback processing failed: {result.error}");
+                                Console.WriteLine($"LoginPage: OAuth callback processing failed: {result.error}");
+                                await MainThread.InvokeOnMainThreadAsync(async () =>
+                                {
+                                    await DisplayAlert("Sign In Error", result.error ?? "Failed to process OAuth callback. Please try again.", "OK");
+                                });
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("LoginPage: No stored callback URL found");
+                            Console.WriteLine("LoginPage: No stored callback URL found");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"LoginPage: Error processing OAuth callback notification: {ex.Message}");
+                        Console.WriteLine($"LoginPage: Error processing OAuth callback notification: {ex.Message}");
+                        await MainThread.InvokeOnMainThreadAsync(async () =>
+                        {
+                            await DisplayAlert("Error", $"Failed to process OAuth callback: {ex.Message}", "OK");
+                        });
+                    }
+                });
+            #endif
         }
         
         private void LoadSavedCredentials()
@@ -118,40 +206,58 @@ namespace PhotoJobApp
         protected override async void OnAppearing()
         {
             base.OnAppearing();
-            
-#if IOS
-			_resumeAttempted = false;
-#endif
 
-            // FIRST: Check for pending OAuth callback (e.g., after returning from 2FA app)
-            // This is critical for Google Sign-In restoration after app termination
-            // Check multiple times with delays to catch callbacks that arrive after page appears
+            // Prevent checks if user is actively typing (within last 3 seconds)
+            // This prevents keyboard from being dismissed while typing
+            if ((DateTime.Now - _lastFocusTime).TotalSeconds < 3)
+            {
+                System.Diagnostics.Debug.WriteLine("LoginPage.OnAppearing - User is actively typing, skipping checks to prevent keyboard dismissal");
+                Console.WriteLine("LoginPage.OnAppearing - User is actively typing, skipping checks to prevent keyboard dismissal");
+                return;
+            }
+
+            // Prevent multiple concurrent auth state checks (this was causing the blinking)
+            if (_isCheckingAuthState)
+            {
+                System.Diagnostics.Debug.WriteLine("LoginPage.OnAppearing - Auth state check already in progress, skipping...");
+                Console.WriteLine("LoginPage.OnAppearing - Auth state check already in progress, skipping...");
+                return;
+            }
+
+            // Only check auth state once per page appearance (not on every focus change)
+            if (_hasCheckedAuthState)
+            {
+                System.Diagnostics.Debug.WriteLine("LoginPage.OnAppearing - Already checked auth state, skipping...");
+                Console.WriteLine("LoginPage.OnAppearing - Already checked auth state, skipping...");
+                return;
+            }
+
+            _isCheckingAuthState = true;
+
+            // FIRST: Check for pending OAuth callback (e.g. after returning from browser or 2FA app)
+            // Only check once, not repeatedly
             #if IOS
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    // Check immediately
+                    // Add a small delay to ensure NSUserDefaults is fully synchronized
+                    await Task.Delay(200);
+                    
+                    // Check for pending callback first (highest priority)
                     await CheckForPendingCallback();
                     
-                    // Check again after short delays (callbacks might arrive slightly after page appears)
-                    await Task.Delay(500);
-                    await CheckForPendingCallback();
-                    
-                    await Task.Delay(1000);
-                    await CheckForPendingCallback();
-                    
-                    await Task.Delay(1500);
-                    await CheckForPendingCallback();
-
-					// Give the system a moment to resume WebAuthenticator before attempting recovery
-					await Task.Delay(500);
-					await AttemptResumeGoogleSignInAsync();
+                    // Then check if we should resume OAuth flow (only if no callback found)
+                    await AttemptResumeGoogleSignInAsync();
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error checking for pending OAuth callback: {ex.Message}");
                     Console.WriteLine($"Error checking for pending OAuth callback: {ex.Message}");
+                }
+                finally
+                {
+                    _isCheckingAuthState = false;
                 }
             });
             #endif
@@ -168,26 +274,38 @@ namespace PhotoJobApp
                     System.Diagnostics.Debug.WriteLine("User is already authenticated, checking if session is still valid...");
                     Console.WriteLine("User is already authenticated, checking if session is still valid...");
                     
-                    // Verify the authentication state is still valid
-                    var (isAuthenticated, user) = await _authService.CheckAuthStateAsync();
+                    // Verify the authentication state is still valid with timeout to prevent hanging
+                    var checkAuthTask = _authService.CheckAuthStateAsync();
+                    var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                    var completedTask = await Task.WhenAny(checkAuthTask, timeoutTask);
                     
-                    if (isAuthenticated && user != null)
+                    if (completedTask == checkAuthTask && !checkAuthTask.IsFaulted)
                     {
-                        System.Diagnostics.Debug.WriteLine($"✓ Automatic restoration: User is authenticated ({user.Email}), navigating to main app...");
-                        Console.WriteLine($"✓ Automatic restoration: User is authenticated ({user.Email}), navigating to main app...");
-                        
-                        // Ensure authentication state is saved
-                        Preferences.Set("IsAuthenticated", true);
-                        Preferences.Set("UserId", user.Id);
-                        Preferences.Set("UserEmail", user.Email ?? "");
-                        
-                        // Navigate to main app automatically
-                        await NavigateToMainApp();
+                        var (isAuthenticated, user) = await checkAuthTask;
+                    
+                        if (isAuthenticated && user != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"✓ Automatic restoration: User is authenticated ({user.Email}), navigating to main app...");
+                            Console.WriteLine($"✓ Automatic restoration: User is authenticated ({user.Email}), navigating to main app...");
+                            
+                            // Ensure authentication state is saved
+                            Preferences.Set("IsAuthenticated", true);
+                            Preferences.Set("UserId", user.Id);
+                            Preferences.Set("UserEmail", user.Email ?? "");
+                            
+                            // Navigate to main app automatically
+                            await NavigateToMainApp();
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("Previous session expired, user needs to sign in again");
+                            Console.WriteLine("Previous session expired, user needs to sign in again");
+                        }
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("Previous session expired, user needs to sign in again");
-                        Console.WriteLine("Previous session expired, user needs to sign in again");
+                        System.Diagnostics.Debug.WriteLine("CheckAuthStateAsync timed out or failed, skipping automatic restoration");
+                        Console.WriteLine("CheckAuthStateAsync timed out or failed, skipping automatic restoration");
                     }
                 }
                 else
@@ -201,6 +319,27 @@ namespace PhotoJobApp
                 System.Diagnostics.Debug.WriteLine($"Error checking authentication state in OnAppearing: {ex.Message}");
                 Console.WriteLine($"Error checking authentication state in OnAppearing: {ex.Message}");
             }
+            finally
+            {
+                _hasCheckedAuthState = true;
+                _isCheckingAuthState = false;
+            }
+        }
+        
+        protected override void OnDisappearing()
+        {
+            base.OnDisappearing();
+            // Reset flag when page disappears so it can check again when it reappears
+            _hasCheckedAuthState = false;
+            
+            #if IOS
+            // Remove notification observer to prevent memory leaks
+            if (_oauthCallbackObserver != null)
+            {
+                NSNotificationCenter.DefaultCenter.RemoveObserver(_oauthCallbackObserver);
+                _oauthCallbackObserver = null;
+            }
+            #endif
         }
         
         #if IOS
@@ -208,6 +347,13 @@ namespace PhotoJobApp
         {
             try
             {
+                // Don't check if user is actively typing (prevents keyboard dismissal)
+                if ((DateTime.Now - _lastFocusTime).TotalSeconds < 3)
+                {
+                    System.Diagnostics.Debug.WriteLine("CheckForPendingCallback - User is actively typing, skipping to prevent keyboard dismissal");
+                    return;
+                }
+            
                 System.Diagnostics.Debug.WriteLine("LoginPage.CheckForPendingCallback - Checking for pending OAuth callback...");
                 Console.WriteLine("LoginPage.CheckForPendingCallback - Checking for pending OAuth callback...");
                 
@@ -245,29 +391,37 @@ namespace PhotoJobApp
         
 		private async Task AttemptResumeGoogleSignInAsync()
 		{
-			if (_resumeAttempted)
-			{
-				return;
-			}
-			
-			_resumeAttempted = true;
-			
 			try
 			{
+				// Don't check if user is actively typing (prevents keyboard dismissal)
+				if ((DateTime.Now - _lastFocusTime).TotalSeconds < 3)
+				{
+					System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync - User is actively typing, skipping to prevent keyboard dismissal");
+					return;
+				}
+			
 				var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
 				userDefaults.Synchronize();
 				
 				var signInInProgress = userDefaults.BoolForKey(GoogleSignInInProgressKey);
 				var pendingCallback = userDefaults.StringForKey(PendingOAuthCallbackKey);
 				
-				if (!signInInProgress || !string.IsNullOrEmpty(pendingCallback))
+				// If we have a pending callback, process it instead of resuming
+				if (!string.IsNullOrEmpty(pendingCallback))
 				{
-					System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync: Nothing to resume (either not in progress or callback already present).");
-					Console.WriteLine("AttemptResumeGoogleSignInAsync: Nothing to resume (either not in progress or callback already present).");
+					System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync: Pending callback found, processing it.");
+					Console.WriteLine("AttemptResumeGoogleSignInAsync: Pending callback found, processing it.");
+					await CheckForPendingCallback();
 					return;
 				}
 				
-				var resumeAttempts = (int)userDefaults.IntForKey(GoogleSignInResumeAttemptsKey);
+				if (!signInInProgress)
+				{
+					System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync: Sign-in not in progress, nothing to resume.");
+					Console.WriteLine("AttemptResumeGoogleSignInAsync: Sign-in not in progress, nothing to resume.");
+					return;
+				}
+				
 				var startedSeconds = userDefaults.DoubleForKey(GoogleSignInStartKey);
 				DateTimeOffset startedAt;
 				
@@ -280,56 +434,57 @@ namespace PhotoJobApp
 					startedAt = DateTimeOffset.UtcNow;
 				}
 				
-				var elapsed = DateTimeOffset.UtcNow - startedAt;
-				System.Diagnostics.Debug.WriteLine($"AttemptResumeGoogleSignInAsync: Sign-in in progress for {elapsed.TotalSeconds:F1} seconds, resume attempts = {resumeAttempts}");
-				Console.WriteLine($"AttemptResumeGoogleSignInAsync: Sign-in in progress for {elapsed.TotalSeconds:F1} seconds, resume attempts = {resumeAttempts}");
+				var signInElapsed = DateTimeOffset.UtcNow - startedAt;
+				System.Diagnostics.Debug.WriteLine($"AttemptResumeGoogleSignInAsync: Sign-in in progress for {signInElapsed.TotalSeconds:F1}s");
+				Console.WriteLine($"AttemptResumeGoogleSignInAsync: Sign-in in progress for {signInElapsed.TotalSeconds:F1}s");
 				
-				if (elapsed > TimeSpan.FromMinutes(5))
+				if (signInElapsed > TimeSpan.FromMinutes(5))
 				{
 					System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync: Sign-in attempt timed out. Clearing flags.");
 					Console.WriteLine("AttemptResumeGoogleSignInAsync: Sign-in attempt timed out. Clearing flags.");
 					
 					ResetGoogleSignInTracking();
-					
-					await MainThread.InvokeOnMainThreadAsync(async () =>
-					{
-						await DisplayAlert("Google Sign-In", "Your previous Google sign-in attempt timed out. Please try again.", "OK");
-					});
-					
 					return;
 				}
 				
-				if (resumeAttempts >= 3)
+				// Check if we have a stored OAuth URL to resume
+				// Only resume if it's very recent (< 2 minutes) to avoid using stale URLs
+				var storedAuthUrl = userDefaults.StringForKey("GoogleOAuthAuthUrl");
+				var storedCallbackUrl = userDefaults.StringForKey("GoogleOAuthRedirectUri");
+				var storedTimestamp = userDefaults.DoubleForKey("GoogleOAuthTimestamp");
+				
+				if (!string.IsNullOrEmpty(storedAuthUrl) && !string.IsNullOrEmpty(storedCallbackUrl) && storedTimestamp > 0)
 				{
-					System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync: Maximum automatic resume attempts reached.");
-					Console.WriteLine("AttemptResumeGoogleSignInAsync: Maximum automatic resume attempts reached.");
-					return;
-				}
-				
-				userDefaults.SetInt(resumeAttempts + 1, GoogleSignInResumeAttemptsKey);
-				userDefaults.Synchronize();
-				
-				System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync: Relaunching Google Sign-In automatically.");
-				Console.WriteLine("AttemptResumeGoogleSignInAsync: Relaunching Google Sign-In automatically.");
-				
-				await MainThread.InvokeOnMainThreadAsync(() =>
-				{
-					try
+					var storedTime = DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(Math.Round(storedTimestamp)));
+					var urlAge = DateTimeOffset.UtcNow - storedTime;
+					
+					// Only resume if very recent (< 2 minutes) - this means user just tapped button and app was terminated
+					if (urlAge < TimeSpan.FromMinutes(2))
 					{
-						if (GoogleSignInButton != null)
-						{
-							GoogleSignInButton.IsEnabled = false;
-							GoogleSignInButton.Text = "Signing in...";
-						}
+						System.Diagnostics.Debug.WriteLine($"AttemptResumeGoogleSignInAsync: Found recent stored OAuth URL ({urlAge.TotalSeconds:F1}s old) - will use it when user taps Sign in with Google");
+						Console.WriteLine($"AttemptResumeGoogleSignInAsync: Found recent stored OAuth URL ({urlAge.TotalSeconds:F1}s old) - will use it when user taps Sign in with Google");
+						// Don't launch WebAuthenticator automatically - wait for user to tap the button
+						// This prevents Code=3 errors from launching when app isn't fully in foreground
+					}
+					else
+					{
+						System.Diagnostics.Debug.WriteLine($"AttemptResumeGoogleSignInAsync: Stored OAuth URL is too old ({urlAge.TotalMinutes:F1} minutes) - clearing it");
+						Console.WriteLine($"AttemptResumeGoogleSignInAsync: Stored OAuth URL is too old ({urlAge.TotalMinutes:F1} minutes) - clearing it");
 						
-						OnGoogleSignInClicked(null, EventArgs.Empty);
+						// Clear stale OAuth data
+						userDefaults.RemoveObject("GoogleOAuthAuthUrl");
+						userDefaults.RemoveObject("GoogleOAuthRedirectUri");
+						userDefaults.RemoveObject("GoogleOAuthState");
+						userDefaults.RemoveObject("GoogleOAuthNonce");
+						userDefaults.RemoveObject("GoogleOAuthTimestamp");
+						userDefaults.Synchronize();
 					}
-					catch (Exception ex)
-					{
-						System.Diagnostics.Debug.WriteLine($"AttemptResumeGoogleSignInAsync: Error relaunching Google Sign-In: {ex.Message}");
-						Console.WriteLine($"AttemptResumeGoogleSignInAsync: Error relaunching Google Sign-In: {ex.Message}");
-					}
-				});
+				}
+				else
+				{
+					System.Diagnostics.Debug.WriteLine("AttemptResumeGoogleSignInAsync: No stored OAuth URL found, waiting for callback.");
+					Console.WriteLine("AttemptResumeGoogleSignInAsync: No stored OAuth URL found, waiting for callback.");
+				}
 			}
 			catch (Exception ex)
 			{
@@ -340,18 +495,25 @@ namespace PhotoJobApp
 		
         private async Task ProcessPendingOAuthCallback(string callbackUrl)
         {
+#if IOS
+            // Declare userDefaults at method level so it's accessible in all nested #if IOS blocks
+            var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+#endif
             try
             {
                 System.Diagnostics.Debug.WriteLine($"Processing pending OAuth callback: {callbackUrl.Substring(0, Math.Min(100, callbackUrl.Length))}...");
                 Console.WriteLine($"Processing pending OAuth callback: {callbackUrl.Substring(0, Math.Min(100, callbackUrl.Length))}...");
                 
                 // Clear the pending callback flag immediately to prevent duplicate processing
-                var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+#if IOS
 				userDefaults.RemoveObject(PendingOAuthCallbackKey);
 				userDefaults.SetBool(false, GoogleSignInInProgressKey);
 				userDefaults.RemoveObject(GoogleSignInStartKey);
 				userDefaults.SetInt(0, GoogleSignInResumeAttemptsKey);
+                // Note: We keep GoogleOAuthState, GoogleOAuthNonce, GoogleOAuthRedirectUri, GoogleOAuthClientId
+                // until sign-in completes successfully or fails - they're needed for code exchange
                 userDefaults.Synchronize();
+#endif
                 
                 // Parse the callback URL
                 // Firebase redirects can come in different formats:
@@ -423,6 +585,40 @@ namespace PhotoJobApp
                         System.Diagnostics.Debug.WriteLine($"  {param} = {(queryParams[param].Length > 50 ? queryParams[param].Substring(0, 50) + "..." : queryParams[param])}");
                     }
                     
+                    // Verify state parameter if present (security check)
+                    var callbackState = queryParams.ContainsKey("state") ? queryParams["state"] : null;
+#if IOS
+                    if (!string.IsNullOrEmpty(callbackState))
+                    {
+                        try
+                        {
+                            userDefaults.Synchronize();
+                            var storedState = userDefaults.StringForKey("GoogleOAuthState");
+                            
+                            if (!string.IsNullOrEmpty(storedState) && storedState != callbackState)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"⚠️ State mismatch! Stored: {storedState}, Callback: {callbackState}");
+                                Console.WriteLine($"⚠️ State mismatch! Stored: {storedState}, Callback: {callbackState}");
+                                // Clear OAuth state tracking flags on state mismatch
+                                ResetGoogleSignInTracking();
+                                await DisplayAlert("Sign-In Error", "OAuth state verification failed. This may indicate a security issue. Please try again.", "OK");
+                                return;
+                            }
+                            else if (!string.IsNullOrEmpty(storedState))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"✓ OAuth state verified successfully");
+                                Console.WriteLine($"✓ OAuth state verified successfully");
+                            }
+                        }
+                        catch (Exception stateEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Warning: Failed to verify OAuth state: {stateEx.Message}");
+                            Console.WriteLine($"Warning: Failed to verify OAuth state: {stateEx.Message}");
+                            // Continue anyway - state verification is a security best practice but not critical
+                        }
+                    }
+#endif
+                    
                     // Look for Firebase auth tokens
                     // Firebase can return tokens in different parameter names
                     var idToken = queryParams.ContainsKey("id_token") ? queryParams["id_token"] : 
@@ -440,6 +636,8 @@ namespace PhotoJobApp
                         var errorDescription = queryParams.ContainsKey("error_description") ? queryParams["error_description"] : error;
                         System.Diagnostics.Debug.WriteLine($"OAuth callback contains error: {error} - {errorDescription}");
                         Console.WriteLine($"OAuth callback contains error: {error} - {errorDescription}");
+                        // Clear OAuth state tracking flags on error
+                        ResetGoogleSignInTracking();
                         await DisplayAlert("Sign-In Error", $"Google Sign-In failed: {errorDescription ?? error}", "OK");
                         return;
                     }
@@ -462,6 +660,9 @@ namespace PhotoJobApp
                             Preferences.Set("UserId", result.user.Id);
                             Preferences.Set("UserEmail", result.user.Email ?? "");
                             
+                            // Clear OAuth state tracking flags
+                            ResetGoogleSignInTracking();
+                            
                             // Navigate to main app
                             await NavigateToMainApp();
                             return;
@@ -470,17 +671,72 @@ namespace PhotoJobApp
                         {
                             System.Diagnostics.Debug.WriteLine($"Google Sign-In failed: {result.error}");
                             Console.WriteLine($"Google Sign-In failed: {result.error}");
+                            // Clear OAuth state tracking flags on failure
+                            ResetGoogleSignInTracking();
                             await DisplayAlert("Sign-In Error", result.error ?? "Failed to sign in with Google", "OK");
                             return;
                         }
                     }
                     else if (!string.IsNullOrEmpty(code))
                     {
-                        // Firebase sometimes returns an authorization code instead of id_token
-                        // This needs to be exchanged for tokens
-                        System.Diagnostics.Debug.WriteLine("Found authorization code in callback, but code exchange not implemented");
-                        Console.WriteLine("Found authorization code in callback, but code exchange not implemented");
-                        await DisplayAlert("Sign-In Error", "Authorization code received but not yet supported. Please try again.", "OK");
+                        System.Diagnostics.Debug.WriteLine("Found authorization code in callback, attempting exchange for tokens...");
+                        Console.WriteLine("Found authorization code in callback, attempting exchange for tokens...");
+
+                        // Try to restore redirectUri from stored OAuth state first
+                        string redirectUri = null;
+#if IOS
+                        try
+                        {
+                            userDefaults.Synchronize();
+                            redirectUri = userDefaults.StringForKey("GoogleOAuthRedirectUri");
+                            if (!string.IsNullOrEmpty(redirectUri))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"✓ Restored redirectUri from stored OAuth state: {redirectUri}");
+                                Console.WriteLine($"✓ Restored redirectUri from stored OAuth state: {redirectUri}");
+                            }
+                        }
+                        catch (Exception restoreEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Warning: Failed to restore redirectUri: {restoreEx.Message}");
+                            Console.WriteLine($"Warning: Failed to restore redirectUri: {restoreEx.Message}");
+                        }
+#endif
+                        
+                        // Fallback to extracting from callback URI if not restored
+                        if (string.IsNullOrWhiteSpace(redirectUri))
+                        {
+                            redirectUri = callbackUri.GetLeftPart(UriPartial.Path);
+                            if (string.IsNullOrWhiteSpace(redirectUri))
+                            {
+                                redirectUri = $"{callbackUri.Scheme}:/oauth2redirect";
+                            }
+                            System.Diagnostics.Debug.WriteLine($"Using redirectUri from callback URI: {redirectUri}");
+                            Console.WriteLine($"Using redirectUri from callback URI: {redirectUri}");
+                        }
+
+                        var result = await _authService.SignInWithGoogleAuthorizationCodeAsync(code, redirectUri);
+                        if (result.success && result.user != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"✓✓✓ Google Sign-In successful via authorization code! User: {result.user.Email}");
+                            Console.WriteLine($"✓✓✓ Google Sign-In successful via authorization code! User: {result.user.Email}");
+
+                            Preferences.Set("IsAuthenticated", true);
+                            Preferences.Set("UserId", result.user.Id);
+                            Preferences.Set("UserEmail", result.user.Email ?? "");
+                            
+                            // Clear OAuth state tracking flags
+                            ResetGoogleSignInTracking();
+
+                            await NavigateToMainApp();
+                            return;
+                        }
+
+                        var errorMessage = result.error ?? "Unable to exchange Google authorization code.";
+                        System.Diagnostics.Debug.WriteLine($"Authorization code exchange failed: {errorMessage}");
+                        Console.WriteLine($"Authorization code exchange failed: {errorMessage}");
+                        // Clear OAuth state tracking flags on failure
+                        ResetGoogleSignInTracking();
+                        await DisplayAlert("Sign-In Error", errorMessage, "OK");
                         return;
                     }
                     else if (!string.IsNullOrEmpty(accessToken))
@@ -500,6 +756,8 @@ namespace PhotoJobApp
                             System.Diagnostics.Debug.WriteLine($"  {param.Key} = {param.Value.Substring(0, Math.Min(100, param.Value.Length))}...");
                             Console.WriteLine($"  {param.Key} = {param.Value.Substring(0, Math.Min(100, param.Value.Length))}...");
                         }
+                        // Clear OAuth state tracking flags on error
+                        ResetGoogleSignInTracking();
                         await DisplayAlert("Sign-In Error", "Unable to complete Google Sign-In. No authentication token received.", "OK");
                         return;
                     }
@@ -531,10 +789,17 @@ namespace PhotoJobApp
 				userDefaults.RemoveObject(PendingOAuthCallbackKey);
 				userDefaults.RemoveObject(GoogleSignInStartKey);
 				userDefaults.SetInt(0, GoogleSignInResumeAttemptsKey);
+				// Also clear OAuth state (state, nonce, redirectUri, clientId, authUrl, timestamp) after successful sign-in
+				userDefaults.RemoveObject("GoogleOAuthState");
+				userDefaults.RemoveObject("GoogleOAuthNonce");
+				userDefaults.RemoveObject("GoogleOAuthRedirectUri");
+				userDefaults.RemoveObject("GoogleOAuthClientId");
+				userDefaults.RemoveObject("GoogleOAuthAuthUrl"); // Clear stored OAuth URL
+				userDefaults.RemoveObject("GoogleOAuthTimestamp"); // Clear timestamp
 				userDefaults.Synchronize();
 				
-				System.Diagnostics.Debug.WriteLine("ResetGoogleSignInTracking: Cleared Google sign-in tracking flags.");
-				Console.WriteLine("ResetGoogleSignInTracking: Cleared Google sign-in tracking flags.");
+				System.Diagnostics.Debug.WriteLine("ResetGoogleSignInTracking: Cleared Google sign-in tracking flags and OAuth state.");
+				Console.WriteLine("ResetGoogleSignInTracking: Cleared Google sign-in tracking flags and OAuth state.");
 			}
 			catch (Exception ex)
 			{
@@ -760,6 +1025,8 @@ namespace PhotoJobApp
 				
 				System.Diagnostics.Debug.WriteLine("Set GoogleSignInInProgress flag and timestamp in NSUserDefaults");
 				Console.WriteLine("Set GoogleSignInInProgress flag and timestamp in NSUserDefaults");
+
+				// Hot Restart warning removed - let user try Google Sign-In
 #endif
 
 				var result = await _authService.SignInWithGoogleAsync();
@@ -834,6 +1101,26 @@ namespace PhotoJobApp
 					GoogleSignInButton.IsEnabled = true;
 					GoogleSignInButton.Text = "Sign in with Google";
 				}
+            }
+        }
+
+        private async void OnShowRedirectUrlClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                var info = _authService.GetGoogleRedirectDebugInfo();
+                if (string.IsNullOrWhiteSpace(info))
+                {
+                    info = "Redirect information is not available.";
+                }
+
+                await DisplayAlert("Google Redirect Info", info, "OK");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"OnShowRedirectUrlClicked error: {ex.Message}");
+                Console.WriteLine($"OnShowRedirectUrlClicked error: {ex.Message}");
+                await DisplayAlert("Google Redirect Info", $"Failed to retrieve redirect information: {ex.Message}", "OK");
             }
         }
 

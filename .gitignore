@@ -366,3 +366,12 @@ FodyWeavers.xsd
 appsettings.json
 appsettings.*.json
 secrets.json
+
+# Firebase configuration files (contain API keys and client IDs)
+Platforms/Android/google-services.json
+Platforms/iOS/GoogleService-Info.plist
+
+# Log files (may contain sensitive data)
+*.log
+LogDump/
+testlog_extracted/

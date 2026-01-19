@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
@@ -12,10 +14,17 @@ namespace PhotoJobApp.Services
 {
     public class FirebaseAuthService
     {
-        private const string FIREBASE_API_KEY = "AIzaSyDYCKj1mp7GrEftKYPMnoXYrt6EwNsje6c";
         private const string FIREBASE_AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts";
         private readonly HttpClient _httpClient;
         private readonly IConfiguration? _configuration;
+        
+        // Get API key from configuration
+        private string GetApiKey()
+        {
+            return _configuration?["Firebase:ApiKey"] ?? 
+                   FirebaseConfig.ApiKey ?? 
+                   throw new InvalidOperationException("Firebase API key not configured. Please set it in appsettings.json or platform-specific config files.");
+        }
 #if IOS
         private readonly IGoogleSignInService? _googleSignInService;
 #endif
@@ -47,6 +56,8 @@ namespace PhotoJobApp.Services
             public string IdToken { get; set; } = string.Empty;
             public string RefreshToken { get; set; } = string.Empty;
         }
+
+// Hot Restart hint removed - no longer needed
 
 #if ANDROID
         private static string GetAndroidPackageName()
@@ -120,7 +131,7 @@ namespace PhotoJobApp.Services
                 var json = JsonSerializer.Serialize(requestData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = $"{FIREBASE_AUTH_URL}:signUp?key={FIREBASE_API_KEY}";
+                var url = $"{FIREBASE_AUTH_URL}:signUp?key={GetApiKey()}";
                 System.Diagnostics.Debug.WriteLine($"Firebase SignUp URL: {url}");
                 System.Diagnostics.Debug.WriteLine($"Firebase SignUp Request: {json}");
 
@@ -181,7 +192,7 @@ namespace PhotoJobApp.Services
                 var json = JsonSerializer.Serialize(requestData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = $"{FIREBASE_AUTH_URL}:signInWithPassword?key={FIREBASE_API_KEY}";
+                var url = $"{FIREBASE_AUTH_URL}:signInWithPassword?key={GetApiKey()}";
                 System.Diagnostics.Debug.WriteLine($"Firebase SignIn URL: {url}");
                 System.Diagnostics.Debug.WriteLine($"Firebase SignIn Request: {json}");
 
@@ -329,12 +340,14 @@ namespace PhotoJobApp.Services
                     // Verify token is still valid by calling Firebase's getUserInfo API
                     try
                     {
-                        var url = $"{FIREBASE_AUTH_URL}:lookup?key={FIREBASE_API_KEY}";
+                        var url = $"{FIREBASE_AUTH_URL}:lookup?key={GetApiKey()}";
                         var requestData = new { idToken = localUser.IdToken };
                         var json = JsonSerializer.Serialize(requestData);
                         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                        var response = await _httpClient.PostAsync(url, content);
+                        // Add timeout to prevent hanging
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        var response = await _httpClient.PostAsync(url, content, cts.Token);
                         var responseContent = await response.Content.ReadAsStringAsync();
 
                         if (response.IsSuccessStatusCode)
@@ -411,7 +424,7 @@ namespace PhotoJobApp.Services
                 var json = JsonSerializer.Serialize(requestData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = $"https://securetoken.googleapis.com/v1/token?key={FIREBASE_API_KEY}";
+                var url = $"https://securetoken.googleapis.com/v1/token?key={GetApiKey()}";
                 System.Diagnostics.Debug.WriteLine($"Firebase RefreshIdToken URL: {url}");
                 System.Diagnostics.Debug.WriteLine($"Firebase RefreshIdToken Request: {json}");
 
@@ -623,7 +636,7 @@ namespace PhotoJobApp.Services
                 var json = JsonSerializer.Serialize(requestData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = $"{FIREBASE_AUTH_URL}:sendOobCode?key={FIREBASE_API_KEY}";
+                var url = $"{FIREBASE_AUTH_URL}:sendOobCode?key={GetApiKey()}";
                 System.Diagnostics.Debug.WriteLine($"Firebase SendEmailVerification URL: {url}");
 
                 var response = await _httpClient.PostAsync(url, content);
@@ -653,7 +666,7 @@ namespace PhotoJobApp.Services
                 var json = JsonSerializer.Serialize(requestData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = $"{FIREBASE_AUTH_URL}:lookup?key={FIREBASE_API_KEY}";
+                var url = $"{FIREBASE_AUTH_URL}:lookup?key={GetApiKey()}";
                 System.Diagnostics.Debug.WriteLine($"Firebase IsEmailVerified URL: {url}");
 
                 var response = await _httpClient.PostAsync(url, content);
@@ -708,7 +721,7 @@ namespace PhotoJobApp.Services
                 var json = JsonSerializer.Serialize(requestData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = $"{FIREBASE_AUTH_URL}:sendOobCode?key={FIREBASE_API_KEY}";
+                var url = $"{FIREBASE_AUTH_URL}:sendOobCode?key={GetApiKey()}";
                 System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail URL: {url}");
                 System.Diagnostics.Debug.WriteLine($"Firebase SendPasswordResetEmail Request: {json}");
 
@@ -836,10 +849,42 @@ namespace PhotoJobApp.Services
                     return (false, null, "Google reversed client ID is not configured. Ensure GoogleService-Info.plist includes REVERSED_CLIENT_ID.");
                 }
 
+                // Always create a fresh OAuth URL when user explicitly taps "Sign in with Google"
+                // Only resume stored URLs when app returns from termination (handled in LoginPage.OnAppearing)
+                // This ensures each new sign-in attempt gets a fresh OAuth flow
+                var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+                userDefaults.Synchronize();
+                
+                // Clear any previous OAuth data to ensure we start fresh
+                // This prevents reusing stale OAuth URLs from previous attempts
+                userDefaults.RemoveObject("GoogleOAuthAuthUrl");
+                userDefaults.RemoveObject("GoogleOAuthRedirectUri");
+                userDefaults.RemoveObject("GoogleOAuthState");
+                userDefaults.RemoveObject("GoogleOAuthNonce");
+                userDefaults.RemoveObject("GoogleOAuthTimestamp");
+                userDefaults.Synchronize();
+                
+                System.Diagnostics.Debug.WriteLine("Creating fresh OAuth flow (cleared any previous stored URLs)");
+                Console.WriteLine("Creating fresh OAuth flow (cleared any previous stored URLs)");
+                
+                // Create new OAuth flow
+                // IMPORTANT: The redirect URI must match one of the URL schemes in Info.plist
+                // Format: {reversedClientId}:/oauth2redirect
+                // The reversed client ID should match what's in GoogleService-Info.plist REVERSED_CLIENT_ID
                 var redirectUri = $"{reversedClientId}:/oauth2redirect";
                 var state = Guid.NewGuid().ToString("N");
                 var nonce = Guid.NewGuid().ToString("N");
                 var scope = Uri.EscapeDataString("openid email profile");
+
+                // Log the redirect URI being used for debugging
+                System.Diagnostics.Debug.WriteLine($"⚠️ USING DIRECT GOOGLE OAUTH (iOS)");
+                Console.WriteLine($"⚠️ USING DIRECT GOOGLE OAUTH (iOS)");
+                System.Diagnostics.Debug.WriteLine($"  Reversed Client ID: {reversedClientId}");
+                System.Diagnostics.Debug.WriteLine($"  Redirect URI: {redirectUri}");
+                System.Diagnostics.Debug.WriteLine($"  ⚠️ IMPORTANT: This redirect URI MUST match a URL scheme in Info.plist CFBundleURLSchemes");
+                Console.WriteLine($"  Reversed Client ID: {reversedClientId}");
+                Console.WriteLine($"  Redirect URI: {redirectUri}");
+                Console.WriteLine($"  ⚠️ IMPORTANT: This redirect URI MUST match a URL scheme in Info.plist CFBundleURLSchemes");
 
                 authUrl =
                     "https://accounts.google.com/o/oauth2/v2/auth?" +
@@ -855,84 +900,118 @@ namespace PhotoJobApp.Services
 
                 callbackUrl = redirectUri;
 
-                System.Diagnostics.Debug.WriteLine("⚠️ USING DIRECT GOOGLE OAUTH (iOS)");
-                Console.WriteLine("⚠️ USING DIRECT GOOGLE OAUTH (iOS)");
-                System.Diagnostics.Debug.WriteLine($"  Redirect URI: {redirectUri}");
+                // Store OAuth state AND URL for recovery after app termination (2FA scenario)
+                // This allows us to restore the entire OAuth flow when the app comes back
+                try
+                {
+                    userDefaults.SetString(state, "GoogleOAuthState");
+                    userDefaults.SetString(nonce, "GoogleOAuthNonce");
+                    userDefaults.SetString(redirectUri, "GoogleOAuthRedirectUri");
+                    userDefaults.SetString(googleClientId, "GoogleOAuthClientId");
+                    userDefaults.SetString(authUrl, "GoogleOAuthAuthUrl"); // Store the full OAuth URL for resumption
+                    userDefaults.SetDouble(DateTimeOffset.UtcNow.ToUnixTimeSeconds(), "GoogleOAuthTimestamp"); // Store timestamp to check if URL is stale
+                    userDefaults.Synchronize();
+                    
+                    System.Diagnostics.Debug.WriteLine("✓ Stored OAuth state and URL for recovery: state, nonce, redirectUri, clientId, authUrl, timestamp");
+                    Console.WriteLine("✓ Stored OAuth state and URL for recovery: state, nonce, redirectUri, clientId, authUrl, timestamp");
+                }
+                catch (Exception storeEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Warning: Failed to store OAuth state: {storeEx.Message}");
+                    Console.WriteLine($"Warning: Failed to store OAuth state: {storeEx.Message}");
+                }
+
                 System.Diagnostics.Debug.WriteLine($"  State: {state}");
                 System.Diagnostics.Debug.WriteLine($"  Nonce: {nonce}");
                 System.Diagnostics.Debug.WriteLine($"  OAuth URL (truncated): {authUrl.Substring(0, Math.Min(200, authUrl.Length))}...");
-                Console.WriteLine($"  Redirect URI: {redirectUri}");
                 Console.WriteLine($"  State: {state}");
                 Console.WriteLine($"  Nonce: {nonce}");
 #else
-                // For Android (and other non-iOS targets), use Firebase's mobile handler with platform-specific callback parameters.
-                var projectId = FirebaseConfig.ProjectId;
-                var apiKey = FIREBASE_API_KEY;
-                
-                if (string.IsNullOrWhiteSpace(projectId))
-                {
-                    return (false, null, "Firebase configuration is missing. Please check your FirebaseConfig.cs file.");
-                }
-                
-                var cleanProjectId = projectId.Trim().Replace(" ", "");
-                var baseAuthUrl = $"https://{cleanProjectId}.firebaseapp.com";
-                var firebaseAuthHandler = $"{baseAuthUrl}/__/auth/handler";
-                
+                // For Android, use Google's direct OAuth endpoint (avoids Dynamic Links requirement)
 #if ANDROID
                 var androidPackageName = GetAndroidPackageName();
                 var appCallbackUrl = $"{androidPackageName}://oauth2redirect";
                 
-                System.Diagnostics.Debug.WriteLine("Firebase Mobile OAuth Configuration (Android):");
-                System.Diagnostics.Debug.WriteLine($"  Firebase Auth Handler: {firebaseAuthHandler}");
-                System.Diagnostics.Debug.WriteLine($"  App Callback Scheme: {appCallbackUrl}");
+                // Use Web Client ID for Android OAuth with WebAuthenticator
+                // Android OAuth clients (client_type: 1) don't support custom URL schemes
+                // Web Client ID (client_type: 3) works with custom URL schemes via WebAuthenticator
+                var androidClientId = GetGoogleWebClientId();
+                var state = Guid.NewGuid().ToString("N");
+                var nonce = Guid.NewGuid().ToString("N");
+                var scope = Uri.EscapeDataString("openid email profile");
+                
+                System.Diagnostics.Debug.WriteLine("⚠️ USING DIRECT GOOGLE OAUTH (Android)");
+                Console.WriteLine("⚠️ USING DIRECT GOOGLE OAUTH (Android)");
+                System.Diagnostics.Debug.WriteLine($"  Android Client ID: {androidClientId.Substring(0, Math.Min(30, androidClientId.Length))}...");
+                System.Diagnostics.Debug.WriteLine($"  Callback URL: {appCallbackUrl}");
                 System.Diagnostics.Debug.WriteLine($"  Android Package: {androidPackageName}");
-                Console.WriteLine("Firebase Mobile OAuth Configuration (Android):");
-                Console.WriteLine($"  Firebase Auth Handler: {firebaseAuthHandler}");
-                Console.WriteLine($"  App Callback Scheme: {appCallbackUrl}");
+                Console.WriteLine($"  Android Client ID: {androidClientId.Substring(0, Math.Min(30, androidClientId.Length))}...");
+                Console.WriteLine($"  Callback URL: {appCallbackUrl}");
                 Console.WriteLine($"  Android Package: {androidPackageName}");
                 
-                var firebaseMobileOAuthUrl = $"{firebaseAuthHandler}?" +
-                    $"apiKey={Uri.EscapeDataString(apiKey)}&" +
-                    $"appName=%5BDEFAULT%5D&" +
-                    $"authType=signInViaRedirect&" +
-                    $"providerId=google.com&" +
-                    $"redirectUrl={Uri.EscapeDataString(firebaseAuthHandler)}&" +
-                    $"continueUrl={Uri.EscapeDataString(appCallbackUrl)}&" +
-                    $"apn={Uri.EscapeDataString(androidPackageName)}&" +
-                    $"v=9.23.0";
-
-                authUrl = firebaseMobileOAuthUrl;
+                // Store OAuth state for recovery
+                try
+                {
+                    Preferences.Set("GoogleOAuthState", state);
+                    Preferences.Set("GoogleOAuthNonce", nonce);
+                    Preferences.Set("GoogleOAuthRedirectUri", appCallbackUrl);
+                    Preferences.Set("GoogleOAuthClientId", androidClientId);
+                    System.Diagnostics.Debug.WriteLine("✓ Stored OAuth state for recovery");
+                    Console.WriteLine("✓ Stored OAuth state for recovery");
+                }
+                catch (Exception storeEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Warning: Failed to store OAuth state: {storeEx.Message}");
+                    Console.WriteLine($"Warning: Failed to store OAuth state: {storeEx.Message}");
+                }
+                
+                // Use Google's direct OAuth endpoint (same as iOS)
+                authUrl =
+                    "https://accounts.google.com/o/oauth2/v2/auth?" +
+                    $"client_id={Uri.EscapeDataString(androidClientId)}&" +
+                    $"redirect_uri={Uri.EscapeDataString(appCallbackUrl)}&" +
+                    $"response_type=code%20id_token&" +
+                    $"scope={scope}&" +
+                    $"state={state}&" +
+                    $"nonce={nonce}&" +
+                    "access_type=offline&" +
+                    "include_granted_scopes=true&" +
+                    "prompt=select_account";
+                
                 callbackUrl = appCallbackUrl;
+                
+                System.Diagnostics.Debug.WriteLine($"  State: {state}");
+                System.Diagnostics.Debug.WriteLine($"  Nonce: {nonce}");
+                Console.WriteLine($"  State: {state}");
+                Console.WriteLine($"  Nonce: {nonce}");
 #else
-                // Default fallback for other platforms (e.g., Windows, MacCatalyst) can continue using the existing scheme.
-                var appCallbackUrl = "com.pinebelttrophy.photojobapp2025://";
-                var bundleId = "com.pinebelttrophy.photojobapp2025";
+                // For other platforms (Windows, MacCatalyst), use Web Client ID with direct Google OAuth
+                var appCallbackUrl = "com.pinebelttrophy.photojobapp2025://oauth2redirect";
+                var state = Guid.NewGuid().ToString("N");
+                var nonce = Guid.NewGuid().ToString("N");
+                var scope = Uri.EscapeDataString("openid email profile");
                 
-                System.Diagnostics.Debug.WriteLine("Firebase Mobile OAuth Configuration (default):");
-                System.Diagnostics.Debug.WriteLine($"  Firebase Auth Handler: {firebaseAuthHandler}");
-                System.Diagnostics.Debug.WriteLine($"  App Callback Scheme: {appCallbackUrl}");
-                System.Diagnostics.Debug.WriteLine($"  Bundle ID: {bundleId}");
-                Console.WriteLine("Firebase Mobile OAuth Configuration (default):");
-                Console.WriteLine($"  Firebase Auth Handler: {firebaseAuthHandler}");
-                Console.WriteLine($"  App Callback Scheme: {appCallbackUrl}");
-                Console.WriteLine($"  Bundle ID: {bundleId}");
+                System.Diagnostics.Debug.WriteLine("⚠️ USING DIRECT GOOGLE OAUTH (Other Platform)");
+                Console.WriteLine("⚠️ USING DIRECT GOOGLE OAUTH (Other Platform)");
+                System.Diagnostics.Debug.WriteLine($"  Web Client ID: {googleClientId.Substring(0, Math.Min(30, googleClientId.Length))}...");
+                System.Diagnostics.Debug.WriteLine($"  Callback URL: {appCallbackUrl}");
+                Console.WriteLine($"  Web Client ID: {googleClientId.Substring(0, Math.Min(30, googleClientId.Length))}...");
+                Console.WriteLine($"  Callback URL: {appCallbackUrl}");
                 
-                var firebaseMobileOAuthUrl = $"{firebaseAuthHandler}?" +
-                    $"apiKey={Uri.EscapeDataString(apiKey)}&" +
-                    $"appName=%5BDEFAULT%5D&" +
-                    $"authType=signInViaRedirect&" +
-                    $"providerId=google.com&" +
-                    $"redirectUrl={Uri.EscapeDataString(firebaseAuthHandler)}&" +
-                    $"continueUrl={Uri.EscapeDataString(appCallbackUrl)}&" +
-                    $"ibi={Uri.EscapeDataString(bundleId)}&" +
-                    $"v=9.23.0";
-
-                authUrl = firebaseMobileOAuthUrl;
+                authUrl =
+                    "https://accounts.google.com/o/oauth2/v2/auth?" +
+                    $"client_id={Uri.EscapeDataString(googleClientId)}&" +
+                    $"redirect_uri={Uri.EscapeDataString(appCallbackUrl)}&" +
+                    $"response_type=code%20id_token&" +
+                    $"scope={scope}&" +
+                    $"state={state}&" +
+                    $"nonce={nonce}&" +
+                    "access_type=offline&" +
+                    "include_granted_scopes=true&" +
+                    "prompt=select_account";
+                
                 callbackUrl = appCallbackUrl;
 #endif
-
-                System.Diagnostics.Debug.WriteLine($"⚠️ USING FIREBASE MOBILE OAUTH (base domain: {baseAuthUrl})");
-                Console.WriteLine($"⚠️ USING FIREBASE MOBILE OAUTH (base domain: {baseAuthUrl})");
 #endif
                 
                 try
@@ -1007,9 +1086,18 @@ namespace PhotoJobApp.Services
                     {
                         System.Diagnostics.Debug.WriteLine($"✓ Received authorization code from OAuth provider");
                         Console.WriteLine($"✓ Received authorization code from OAuth provider");
+                        var codeResult = await SignInWithGoogleAuthorizationCodeAsync(authCode, callbackUrl);
+                        if (codeResult.success && codeResult.user != null)
+                        {
+                            return codeResult;
+                        }
+                        
+                        var codeError = codeResult.error ?? "Failed to exchange Google authorization code.";
+                        System.Diagnostics.Debug.WriteLine($"Authorization code exchange failed: {codeError}");
+                        Console.WriteLine($"Authorization code exchange failed: {codeError}");
                         
                         // Depending on the provider, this might be a Firebase session code or a Google OAuth code.
-                        // Check if there's a link or other parameter
+                        // Check if there's a link or other parameter as a fallback
                         if (authResult.Properties.TryGetValue("link", out var link) || 
                             authResult.Properties.TryGetValue("deepLink", out link))
                         {
@@ -1038,7 +1126,7 @@ namespace PhotoJobApp.Services
                             }
                         }
                         
-                        return (false, null, "Received authorization code but cannot complete the exchange automatically yet. Please try the sign-in again.");
+                        return (false, null, codeError);
                     }
                     
                     // No token or code found
@@ -1085,6 +1173,191 @@ namespace PhotoJobApp.Services
             }
         }
 
+        /// <summary>
+        /// Parses a callback URL from OAuth flow and extracts the ID token or authorization code.
+        /// This is used when the app restarts during OAuth (e.g., during 2FA) and the WebAuthenticator session is lost.
+        /// Handles both direct ID tokens and authorization codes that need to be exchanged.
+        /// </summary>
+        public async Task<(bool success, FirebaseUser? user, string? error)> ParseCallbackUrlAsync(string callbackUrl)
+        {
+            // Debug Log: Let's see exactly what Google sent back!
+            System.Diagnostics.Debug.WriteLine($"═══════════════════════════════════════════════════════");
+            System.Diagnostics.Debug.WriteLine($"🔎 Parsing Callback URL: {callbackUrl}");
+            System.Diagnostics.Debug.WriteLine($"═══════════════════════════════════════════════════════");
+            Console.WriteLine($"═══════════════════════════════════════════════════════");
+            Console.WriteLine($"🔎 Parsing Callback URL: {callbackUrl}");
+            Console.WriteLine($"═══════════════════════════════════════════════════════");
+
+            try 
+            {
+                var uri = new Uri(callbackUrl);
+                string? idToken = null;
+                string? code = null;
+                string? error = null;
+
+                // Helper function to parse query strings (handles both Fragment # and Query ?)
+                void parseParams(string queryString)
+                {
+                    var p = HttpUtility.ParseQueryString(queryString);
+                    // Look for token, code, or error
+                    if (p["id_token"] != null) idToken = p["id_token"];
+                    if (p["idToken"] != null) idToken = p["idToken"];
+                    if (p["code"] != null) code = p["code"];
+                    if (p["error"] != null) error = p["error"];
+                }
+
+                // 1. Check the Fragment part (after #) - Google Hybrid flow usually puts it here
+                if (!string.IsNullOrEmpty(uri.Fragment))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Checking fragment: {uri.Fragment}");
+                    Console.WriteLine($"Checking fragment: {uri.Fragment}");
+                    parseParams(uri.Fragment.TrimStart('#'));
+                }
+
+                // 2. Check the Query part (after ?) - Standard flow puts it here
+                if (!string.IsNullOrEmpty(uri.Query))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Checking query: {uri.Query}");
+                    Console.WriteLine($"Checking query: {uri.Query}");
+                    parseParams(uri.Query);
+                }
+
+                // 3. Check for Firebase "link" (Dynamic Link fallback)
+                if (string.IsNullOrEmpty(idToken) && string.IsNullOrEmpty(code))
+                {
+                    var link = HttpUtility.ParseQueryString(uri.Query)["link"];
+                    if (!string.IsNullOrEmpty(link))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Checking Firebase link: {link.Substring(0, Math.Min(100, link.Length))}...");
+                        Console.WriteLine($"Checking Firebase link: {link.Substring(0, Math.Min(100, link.Length))}...");
+                        try
+                        {
+                            var linkUri = new Uri(link);
+                            if (!string.IsNullOrEmpty(linkUri.Query)) 
+                            {
+                                parseParams(linkUri.Query);
+                            }
+                        }
+                        catch (Exception linkEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error parsing Firebase link: {linkEx.Message}");
+                            Console.WriteLine($"Error parsing Firebase link: {linkEx.Message}");
+                        }
+                    }
+                }
+
+                // Log what we found
+                System.Diagnostics.Debug.WriteLine($"Parse results - ID Token: {(string.IsNullOrEmpty(idToken) ? "NOT FOUND" : "FOUND")}, Code: {(string.IsNullOrEmpty(code) ? "NOT FOUND" : "FOUND")}, Error: {(string.IsNullOrEmpty(error) ? "NONE" : error)}");
+                Console.WriteLine($"Parse results - ID Token: {(string.IsNullOrEmpty(idToken) ? "NOT FOUND" : "FOUND")}, Code: {(string.IsNullOrEmpty(code) ? "NOT FOUND" : "FOUND")}, Error: {(string.IsNullOrEmpty(error) ? "NONE" : error)}");
+
+                // --- ACTION 1: We found the Token directly ---
+                if (!string.IsNullOrEmpty(idToken))
+                {
+                    System.Diagnostics.Debug.WriteLine("✓ Found ID token directly - signing in with Firebase...");
+                    Console.WriteLine("✓ Found ID token directly - signing in with Firebase...");
+                    return await SignInWithGoogleIdTokenAsync(idToken);
+                }
+                
+                // --- ACTION 2: We found an Auth Code (Exchange it!) ---
+                if (!string.IsNullOrEmpty(code))
+                {
+                    System.Diagnostics.Debug.WriteLine("✓ Found authorization code - exchanging for tokens...");
+                    Console.WriteLine("✓ Found authorization code - exchanging for tokens...");
+                    
+                    // We need the Redirect URI to complete the exchange. 
+                    // We try to grab the one we saved earlier, or reconstruct the default.
+                    string? redirectUri = null;
+                    
+                    #if IOS
+                    // Try to get from NSUserDefaults first (most reliable)
+                    try
+                    {
+                        var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+                        userDefaults.Synchronize();
+                        redirectUri = userDefaults.StringForKey("GoogleOAuthRedirectUri");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error reading redirect URI from NSUserDefaults: {ex.Message}");
+                        Console.WriteLine($"Error reading redirect URI from NSUserDefaults: {ex.Message}");
+                    }
+                    #endif
+                    
+                    // Fallback to Preferences
+                    if (string.IsNullOrEmpty(redirectUri))
+                    {
+                        redirectUri = Preferences.Get("GoogleOAuthRedirectUri", null);
+                    }
+                    
+                    // If still missing, reconstruct default
+                    if (string.IsNullOrEmpty(redirectUri))
+                    {
+                        System.Diagnostics.Debug.WriteLine("Redirect URI not found in storage - reconstructing default...");
+                        Console.WriteLine("Redirect URI not found in storage - reconstructing default...");
+                        var reversedClientId = GetGoogleReversedClientId();
+                        if (!string.IsNullOrEmpty(reversedClientId))
+                        {
+                            redirectUri = $"{reversedClientId}:/oauth2redirect";
+                            System.Diagnostics.Debug.WriteLine($"Reconstructed redirect URI: {redirectUri}");
+                            Console.WriteLine($"Reconstructed redirect URI: {redirectUri}");
+                        }
+                    }
+                    
+                    if (string.IsNullOrEmpty(redirectUri))
+                    {
+                        return (false, null, "Could not determine redirect URI for authorization code exchange");
+                    }
+                    
+                    return await SignInWithGoogleAuthorizationCodeAsync(code, redirectUri);
+                }
+
+                // --- ACTION 3: Handle Errors ---
+                if (!string.IsNullOrEmpty(error))
+                {
+                    System.Diagnostics.Debug.WriteLine($"✗ Google returned an error: {error}");
+                    Console.WriteLine($"✗ Google returned an error: {error}");
+                    return (false, null, $"Google Error: {error}");
+                }
+                
+                System.Diagnostics.Debug.WriteLine("✗ Could not find token or code in callback URL");
+                Console.WriteLine("✗ Could not find token or code in callback URL");
+                return (false, null, "Could not find token or code in callback URL");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"✗ Error parsing callback: {ex.Message}");
+                Console.WriteLine($"✗ Error parsing callback: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return (false, null, $"Error parsing callback: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Parses a query string into a dictionary of key-value pairs.
+        /// </summary>
+        private Dictionary<string, string> ParseQueryString(string queryString)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
+            if (string.IsNullOrEmpty(queryString))
+                return result;
+            
+            var pairs = queryString.Split('&');
+            foreach (var pair in pairs)
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length == 2)
+                {
+                    var key = Uri.UnescapeDataString(parts[0]);
+                    var value = Uri.UnescapeDataString(parts[1]);
+                    result[key] = value;
+                }
+            }
+            
+            return result;
+        }
+
         public async Task<(bool success, FirebaseUser? user, string? error)> SignInWithGoogleIdTokenAsync(string idToken)
         {
             try
@@ -1100,7 +1373,7 @@ namespace PhotoJobApp.Services
                 var json = JsonSerializer.Serialize(requestData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var url = $"{FIREBASE_AUTH_URL}:signInWithIdp?key={FIREBASE_API_KEY}";
+                var url = $"{FIREBASE_AUTH_URL}:signInWithIdp?key={GetApiKey()}";
                 System.Diagnostics.Debug.WriteLine($"Firebase SignInWithIdp URL: {url}");
                 System.Diagnostics.Debug.WriteLine($"Firebase SignInWithIdp Request: {json}");
 
@@ -1139,14 +1412,21 @@ namespace PhotoJobApp.Services
 
                     // Store authentication data
                     await StoreAuthDataAsync(user);
+                    
+                    // Clear stored OAuth state after successful sign-in
+                    ClearStoredOAuthState();
 
                     return (true, user, null);
                 }
 
-                return (false, null, "Google sign in failed. Please try again.");
+                    // Clear stored OAuth state on failure
+                    ClearStoredOAuthState();
+                    return (false, null, "Google sign in failed. Please try again.");
             }
             catch (Exception ex)
             {
+                // Clear stored OAuth state on exception
+                ClearStoredOAuthState();
                 System.Diagnostics.Debug.WriteLine($"Firebase SignInWithGoogleIdToken Exception: {ex.Message}");
                 return (false, null, $"Google sign in failed: {ex.Message}");
             }
@@ -1226,6 +1506,119 @@ namespace PhotoJobApp.Services
             }
         }
         
+        public async Task<(bool success, FirebaseUser? user, string? error)> SignInWithGoogleAuthorizationCodeAsync(
+            string authCode, string redirectUri)
+        {
+            try
+            {
+                // If redirectUri is not provided, try to restore it from stored OAuth state
+                if (string.IsNullOrEmpty(redirectUri))
+                {
+#if IOS
+                    try
+                    {
+                        var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+                        userDefaults.Synchronize();
+                        var storedRedirectUri = userDefaults.StringForKey("GoogleOAuthRedirectUri");
+                        if (!string.IsNullOrEmpty(storedRedirectUri))
+                        {
+                            redirectUri = storedRedirectUri;
+                            System.Diagnostics.Debug.WriteLine($"✓ Restored redirectUri from stored OAuth state: {redirectUri}");
+                            Console.WriteLine($"✓ Restored redirectUri from stored OAuth state: {redirectUri}");
+                        }
+                    }
+                    catch (Exception restoreEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Warning: Failed to restore redirectUri: {restoreEx.Message}");
+                        Console.WriteLine($"Warning: Failed to restore redirectUri: {restoreEx.Message}");
+                    }
+#endif
+                }
+                
+                // If still no redirectUri, use the default
+                if (string.IsNullOrEmpty(redirectUri))
+                {
+#if IOS
+                    var reversedClientId = GetGoogleReversedClientId();
+                    if (!string.IsNullOrEmpty(reversedClientId))
+                    {
+                        redirectUri = $"{reversedClientId}:/oauth2redirect";
+                        System.Diagnostics.Debug.WriteLine($"Using default redirectUri: {redirectUri}");
+                        Console.WriteLine($"Using default redirectUri: {redirectUri}");
+                    }
+#endif
+                }
+                
+                // Get clientId - try to restore from stored state first
+                string clientId;
+#if IOS
+                try
+                {
+                    var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+                    userDefaults.Synchronize();
+                    var storedClientId = userDefaults.StringForKey("GoogleOAuthClientId");
+                    if (!string.IsNullOrEmpty(storedClientId))
+                    {
+                        clientId = storedClientId;
+                        System.Diagnostics.Debug.WriteLine($"✓ Restored clientId from stored OAuth state");
+                        Console.WriteLine($"✓ Restored clientId from stored OAuth state");
+                    }
+                    else
+                    {
+                        clientId = GetGoogleClientId();
+                    }
+                }
+                catch
+                {
+                    clientId = GetGoogleClientId();
+                }
+#else
+                clientId = GetGoogleClientId();
+#endif
+                
+                var (idToken, _, error) = await ExchangeAuthCodeForTokensAsync(authCode, clientId, redirectUri);
+                
+                if (!string.IsNullOrEmpty(idToken))
+                {
+                    return await SignInWithGoogleIdTokenAsync(idToken);
+                }
+                
+                return (false, null, error ?? "Failed to exchange Google authorization code for tokens.");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SignInWithGoogleAuthorizationCodeAsync error: {ex.Message}");
+                Console.WriteLine($"SignInWithGoogleAuthorizationCodeAsync error: {ex.Message}");
+                return (false, null, $"Failed to complete Google Sign-In from authorization code: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Clears stored OAuth state after successful sign-in or failure
+        /// </summary>
+        private void ClearStoredOAuthState()
+        {
+#if IOS
+            try
+            {
+                var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+                userDefaults.RemoveObject("GoogleOAuthState");
+                userDefaults.RemoveObject("GoogleOAuthNonce");
+                userDefaults.RemoveObject("GoogleOAuthRedirectUri");
+                userDefaults.RemoveObject("GoogleOAuthClientId");
+                userDefaults.Synchronize();
+                
+                System.Diagnostics.Debug.WriteLine("✓ Cleared stored OAuth state");
+                Console.WriteLine("✓ Cleared stored OAuth state");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Warning: Failed to clear OAuth state: {ex.Message}");
+                Console.WriteLine($"Warning: Failed to clear OAuth state: {ex.Message}");
+            }
+#endif
+        }
+        
         public class GoogleTokenResponse
         {
             [JsonPropertyName("access_token")]
@@ -1249,16 +1642,17 @@ namespace PhotoJobApp.Services
             // Get Web Client ID from configuration
             // This can be found in Firebase Console > Project Settings > Your apps > Web app
             // Or in Google Cloud Console > APIs & Services > Credentials
-            try
+            // Get Web Client ID from configuration
+            var webClientId = _configuration?["Firebase:GoogleWebClientId"] ?? 
+                             FirebaseConfig.GoogleWebClientId;
+            
+            if (string.IsNullOrEmpty(webClientId))
             {
-                return _configuration?["Firebase:GoogleWebClientId"] ?? 
-                       "1021759232753-glcofi4hpt6i0jjis09t7te3lu1enk6f.apps.googleusercontent.com";
+                System.Diagnostics.Debug.WriteLine("Warning: Google Web Client ID not configured. Please set Firebase:GoogleWebClientId in appsettings.json");
+                Console.WriteLine("Warning: Google Web Client ID not configured. Please set Firebase:GoogleWebClientId in appsettings.json");
             }
-            catch
-            {
-                // Fallback to the hardcoded client ID provided by user
-                return "1021759232753-glcofi4hpt6i0jjis09t7te3lu1enk6f.apps.googleusercontent.com";
-            }
+            
+            return webClientId ?? string.Empty;
         }
         
         private string GetGoogleiOSClientId()
@@ -1295,9 +1689,10 @@ namespace PhotoJobApp.Services
             }
 #endif
 
-            System.Diagnostics.Debug.WriteLine("GetGoogleiOSClientId: Falling back to hardcoded iOS Client ID");
-            Console.WriteLine("GetGoogleiOSClientId: Falling back to hardcoded iOS Client ID");
-            return "1021759232753-mm6ns7f4r20aohg8ric4med68kqtul9e.apps.googleusercontent.com";
+            System.Diagnostics.Debug.WriteLine("GetGoogleiOSClientId: No iOS Client ID found in configuration or GoogleService-Info.plist");
+            Console.WriteLine("GetGoogleiOSClientId: No iOS Client ID found in configuration or GoogleService-Info.plist");
+            // Return empty string if not configured - this will cause authentication to fail with a clear error
+            return string.Empty;
         }
 
         private string? GetGoogleReversedClientId()
@@ -1372,12 +1767,86 @@ namespace PhotoJobApp.Services
         private string GetGoogleClientId()
         {
             // For iOS OAuth, we need to use the iOS Client ID (not Web Client ID)
+            // For Android OAuth, we need to use the Android Client ID (not Web Client ID)
             // Web clients don't support custom URL schemes
             #if IOS
             return GetGoogleiOSClientId();
+            #elif ANDROID
+            return GetGoogleAndroidClientId();
             #else
             return GetGoogleWebClientId();
             #endif
+        }
+        
+        private string GetGoogleAndroidClientId()
+        {
+            // Android OAuth client ID from configuration or google-services.json
+            var androidClientId = _configuration?["Firebase:GoogleAndroidClientId"];
+            
+            if (string.IsNullOrEmpty(androidClientId))
+            {
+                // On Android, the client ID should be read from google-services.json by the Firebase SDK
+                // This is a fallback that should not normally be used
+                System.Diagnostics.Debug.WriteLine("Warning: Google Android Client ID not configured. Please set Firebase:GoogleAndroidClientId in appsettings.json or ensure google-services.json is properly configured.");
+                Console.WriteLine("Warning: Google Android Client ID not configured. Please set Firebase:GoogleAndroidClientId in appsettings.json or ensure google-services.json is properly configured.");
+            }
+            
+            return androidClientId ?? string.Empty;
+        }
+
+        public string GetGoogleRedirectDebugInfo()
+        {
+            try
+            {
+#if IOS
+                var reversedClientId = GetGoogleReversedClientId();
+                if (string.IsNullOrWhiteSpace(reversedClientId))
+                {
+                    return "Google reversed client ID is not configured. Check GoogleService-Info.plist or appsettings.json.";
+                }
+
+                var redirectUri = $"{reversedClientId}:/oauth2redirect";
+                return $"Redirect URI (iOS): {redirectUri}";
+#elif ANDROID
+                var callbackUrl = $"{GetAndroidPackageName()}://oauth2redirect";
+                var sb = new StringBuilder();
+                sb.AppendLine($"Callback URL (App): {callbackUrl}");
+
+                var projectId = FirebaseConfig.ProjectId?.Trim();
+                if (!string.IsNullOrEmpty(projectId))
+                {
+                    var baseAuthUrl = $"https://{projectId.Replace(" ", string.Empty)}.firebaseapp.com";
+                    sb.AppendLine($"Firebase Auth Handler: {baseAuthUrl}/__/auth/handler");
+                }
+                else
+                {
+                    sb.AppendLine("Firebase project ID is not configured. Update FirebaseConfig.ProjectId.");
+                }
+
+                return sb.ToString().Trim();
+#else
+                const string callbackUrl = "com.pinebelttrophy.photojobapp2025://";
+                var sb = new StringBuilder();
+                sb.AppendLine($"Callback URL (App): {callbackUrl}");
+
+                var projectId = FirebaseConfig.ProjectId?.Trim();
+                if (!string.IsNullOrEmpty(projectId))
+                {
+                    var baseAuthUrl = $"https://{projectId.Replace(" ", string.Empty)}.firebaseapp.com";
+                    sb.AppendLine($"Firebase Auth Handler: {baseAuthUrl}/__/auth/handler");
+                }
+                else
+                {
+                    sb.AppendLine("Firebase project ID is not configured. Update FirebaseConfig.ProjectId.");
+                }
+
+                return sb.ToString().Trim();
+#endif
+            }
+            catch (Exception ex)
+            {
+                return $"Failed to compute redirect URL: {ex.Message}";
+            }
         }
     }
 } 

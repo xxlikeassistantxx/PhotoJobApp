@@ -27,16 +27,14 @@ public partial class AppShell : Shell
 	private void RegisterRoutes()
 	{
 		// Register routes for pages that are not defined as ShellContent in XAML
-		// MainPage and CloudManagementPage are already defined in AppShell.xaml
-		Routing.RegisterRoute("AddEditJobPage", typeof(AddEditJobPage));
+		// MainPage, CloudManagementPage, AddEditJobPage, AddEditJobTypePage, JobAnalysisPage, 
+		// JobTypeManagementPage, and AccountPage are already defined in AppShell.xaml
+		Routing.RegisterRoute("MainPageSearch", typeof(MainPage));
 		Routing.RegisterRoute("JobDetailPage", typeof(JobDetailPage));
-		Routing.RegisterRoute("JobTypeManagementPage", typeof(JobTypeManagementPage));
-		Routing.RegisterRoute("AddEditJobTypePage", typeof(AddEditJobTypePage));
 		Routing.RegisterRoute("JobTypeDetailPage", typeof(JobTypeDetailPage));
 		Routing.RegisterRoute("PhotoGalleryPage", typeof(PhotoGalleryPage));
 		Routing.RegisterRoute("LoginPage", typeof(LoginPage));
 		Routing.RegisterRoute("LogViewerPage", typeof(LogViewerPage));
-		Routing.RegisterRoute("AccountPage", typeof(AccountPage));
 	}
 
 	private async void OnViewLogsClicked(object sender, EventArgs e)

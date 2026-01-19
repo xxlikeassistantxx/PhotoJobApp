@@ -3,6 +3,7 @@ using UIKit;
 using System;
 using System.Collections.Generic;
 using Microsoft.Maui.Authentication;
+using Microsoft.Maui.ApplicationModel; // Required for Platform.OpenUrl
 using Microsoft.Maui.Storage;
 using System.Threading.Tasks;
 using System.Reflection;
@@ -25,30 +26,32 @@ public class AppDelegate : MauiUIApplicationDelegate
 		return MauiProgram.CreateMauiApp();
 	}
 	
-	// Handle URL callbacks when app is launched or returns from background (e.g., from 2FA app)
-	// This is critical for OAuth flows that require switching to other apps
+	/// <summary>
+	/// Handles URL callbacks when app is launched or returns from background (e.g., from 2FA app).
+	/// This is critical for OAuth flows that require switching to other apps.
+	/// 
+	/// Implementation follows the recommended MAUI pattern:
+	/// 1. Try Platform.OpenUrl FIRST (MAUI's recommended way - routes to WebAuthenticator automatically)
+	/// 2. If Platform.OpenUrl handles it, return true immediately
+	/// 3. Otherwise, store callback URL in NSUserDefaults (for persistence if app was terminated)
+	/// 4. Call base.OpenUrl as fallback
+	/// 
+	/// This simplified approach ensures Platform.OpenUrl gets the first chance to handle OAuth callbacks,
+	/// which is essential for WebAuthenticator to receive the login token.
+	/// </summary>
+	[Export("application:openURL:options:")]
 	public override bool OpenUrl(UIApplication application, NSUrl url, NSDictionary options)
 	{
-		// CRITICAL DEBUGGING: Log EVERYTHING about this call
-		// Use PersistentLogger so logs survive app termination
-		var urlDetails = $"URL: {url?.AbsoluteString ?? "NULL"}\n" +
-		                $"Scheme: {url?.Scheme ?? "NULL"}\n" +
-		                $"Host: {url?.Host ?? "NULL"}\n" +
-		                $"Path: {url?.Path ?? "NULL"}\n" +
-		                $"Query: {url?.Query ?? "NULL"}\n" +
-		                $"Fragment: {url?.Fragment ?? "NULL"}\n" +
-		                $"Options: {(options != null ? options.Count.ToString() : "NULL")}";
-		
-		// PersistentLogger.LogCritical("AppDelegate.OpenUrl", "🔵 CALLED!", urlDetails);
-		
-		// Also log to standard outputs (for Visual Studio while connected)
+		// Log that OpenUrl was called (critical for debugging)
 		System.Diagnostics.Debug.WriteLine($"═══════════════════════════════════════════════════════");
 		System.Diagnostics.Debug.WriteLine($"🔵 AppDelegate.OpenUrl CALLED!");
-		System.Diagnostics.Debug.WriteLine($"   {urlDetails.Replace("\n", "\n   ")}");
+		System.Diagnostics.Debug.WriteLine($"   URL: {url?.AbsoluteString ?? "NULL"}");
+		System.Diagnostics.Debug.WriteLine($"   Scheme: {url?.Scheme ?? "NULL"}");
 		System.Diagnostics.Debug.WriteLine($"═══════════════════════════════════════════════════════");
 		Console.WriteLine($"═══════════════════════════════════════════════════════");
 		Console.WriteLine($"🔵 AppDelegate.OpenUrl CALLED!");
-		Console.WriteLine($"   {urlDetails.Replace("\n", "\n   ")}");
+		Console.WriteLine($"   URL: {url?.AbsoluteString ?? "NULL"}");
+		Console.WriteLine($"   Scheme: {url?.Scheme ?? "NULL"}");
 		Console.WriteLine($"═══════════════════════════════════════════════════════");
 		
 		if (url == null)
@@ -56,135 +59,106 @@ public class AppDelegate : MauiUIApplicationDelegate
 			return base.OpenUrl(application, url, options);
 		}
 		
-		// Handle Google Sign-In SDK URLs first (if SDK is available)
-		try
-		{
-			// Use reflection to check if Google Sign-In SDK is available
-			var gidSignInType = Type.GetType("Google.SignIn.GIDSignIn, Xamarin.Google.iOS.SignIn");
-			if (gidSignInType != null)
-			{
-				var sharedInstanceProperty = gidSignInType.GetProperty("SharedInstance", BindingFlags.Public | BindingFlags.Static);
-				if (sharedInstanceProperty != null)
-				{
-					var sharedInstance = sharedInstanceProperty.GetValue(null);
-					var handleUrlMethod = gidSignInType.GetMethod("HandleUrl", new[] { typeof(NSUrl) });
-					if (handleUrlMethod != null)
-					{
-						var handled = (bool)(handleUrlMethod.Invoke(sharedInstance, new object[] { url }) ?? false);
-						if (handled)
-						{
-							System.Diagnostics.Debug.WriteLine("AppDelegate: Google Sign-In handled the URL");
-							Console.WriteLine("AppDelegate: Google Sign-In handled the URL");
-							return true;
-						}
-					}
-				}
-			}
-		}
-		catch (Exception ex)
-		{
-			System.Diagnostics.Debug.WriteLine($"AppDelegate: Error handling Google Sign-In URL: {ex.Message}");
-			Console.WriteLine($"AppDelegate: Error handling Google Sign-In URL: {ex.Message}");
-		}
-		
-		// Handle our custom URL schemes (OAuth callbacks)
+		// STEP 1: Try WebAuthenticator.Default.OpenUrl FIRST (most direct approach)
+		// This is the most reliable way to handle OAuth callbacks for WebAuthenticator
 		var scheme = url.Scheme ?? string.Empty;
 		var isAppScheme = string.Equals(scheme, AppCustomScheme, StringComparison.OrdinalIgnoreCase);
 		var isGoogleScheme = GoogleOAuthSchemes.Value.Contains(scheme);
 		
+		// Log scheme matching details for debugging
+		System.Diagnostics.Debug.WriteLine($"Scheme matching:");
+		System.Diagnostics.Debug.WriteLine($"  URL Scheme: '{scheme}'");
+		System.Diagnostics.Debug.WriteLine($"  App Custom Scheme: '{AppCustomScheme}'");
+		System.Diagnostics.Debug.WriteLine($"  Is App Scheme: {isAppScheme}");
+		System.Diagnostics.Debug.WriteLine($"  Google OAuth Schemes: {string.Join(", ", GoogleOAuthSchemes.Value)}");
+		System.Diagnostics.Debug.WriteLine($"  Is Google Scheme: {isGoogleScheme}");
+		Console.WriteLine($"Scheme matching:");
+		Console.WriteLine($"  URL Scheme: '{scheme}'");
+		Console.WriteLine($"  App Custom Scheme: '{AppCustomScheme}'");
+		Console.WriteLine($"  Is App Scheme: {isAppScheme}");
+		Console.WriteLine($"  Google OAuth Schemes: {string.Join(", ", GoogleOAuthSchemes.Value)}");
+		Console.WriteLine($"  Is Google Scheme: {isGoogleScheme}");
+		
 		if (isAppScheme || isGoogleScheme)
 		{
 			var schemeType = isGoogleScheme ? $"Google OAuth scheme ({scheme})" : "App custom scheme";
-			System.Diagnostics.Debug.WriteLine($"Handling OAuth callback URL ({schemeType}): {url.AbsoluteString}");
-			Console.WriteLine($"Handling OAuth callback URL ({schemeType}): {url.AbsoluteString}");
+			System.Diagnostics.Debug.WriteLine($"Detected {schemeType} - attempting to handle OAuth callback");
+			Console.WriteLine($"Detected {schemeType} - attempting to handle OAuth callback");
 			
-			// PersistentLogger.LogCritical("AppDelegate.OpenUrl", $"Handling {schemeType} callback", url.AbsoluteString);
-			
-			// Always store the URL first (in case WebAuthenticator fails or app was terminated)
-			// Use NSUserDefaults directly for most reliable storage (works even if Preferences isn't ready)
-			// NSUserDefaults is the iOS native storage API and is always available
-			try
-			{
-				var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
-				
-				// Store the callback URL
-				userDefaults.SetString(url.AbsoluteString, "PendingOAuthCallback");
-				userDefaults.SetBool(true, "GoogleSignInInProgress");
-				
-				// CRITICAL: Force synchronization to ensure data is written to disk immediately
-				// This ensures the data persists even if the app is terminated
-				userDefaults.Synchronize();
-				
-				// Verify it was stored
-				var verifyCallback = userDefaults.StringForKey("PendingOAuthCallback");
-				var verifyInProgress = userDefaults.BoolForKey("GoogleSignInInProgress");
-				
-				var verificationStatus = $"Callback: {(string.IsNullOrEmpty(verifyCallback) ? "FAILED" : "SUCCESS")}, InProgress: {verifyInProgress}";
-				
-				// PersistentLogger.LogCritical("AppDelegate.OpenUrl", "✓✓✓ STORED OAuth callback in NSUserDefaults", 
-				// 	$"URL: {url.AbsoluteString}\nVerification: {verificationStatus}");
-				
-				System.Diagnostics.Debug.WriteLine($"✓✓✓ STORED OAuth callback in NSUserDefaults (will persist even if app terminates):");
-				System.Diagnostics.Debug.WriteLine($"  URL: {url.AbsoluteString}");
-				System.Diagnostics.Debug.WriteLine($"  Verification - Callback: {(string.IsNullOrEmpty(verifyCallback) ? "FAILED" : "SUCCESS")}");
-				System.Diagnostics.Debug.WriteLine($"  Verification - InProgress: {verifyInProgress}");
-				Console.WriteLine($"✓✓✓ STORED OAuth callback in NSUserDefaults (will persist even if app terminates):");
-				Console.WriteLine($"  URL: {url.AbsoluteString}");
-				Console.WriteLine($"  Verification - Callback: {(string.IsNullOrEmpty(verifyCallback) ? "FAILED" : "SUCCESS")}");
-				Console.WriteLine($"  Verification - InProgress: {verifyInProgress}");
-				
-				// Post notification immediately so App can process it if already running
-				NSNotificationCenter.DefaultCenter.PostNotificationName("PendingOAuthCallbackFound", null);
-				System.Diagnostics.Debug.WriteLine("Posted PendingOAuthCallbackFound notification from OpenUrl");
-				Console.WriteLine("Posted PendingOAuthCallbackFound notification from OpenUrl");
-				
-				// Also try to store in Preferences if MAUI is ready (for cross-platform consistency)
-				try
-				{
-					Microsoft.Maui.Storage.Preferences.Set("PendingOAuthCallback", url.AbsoluteString);
-					Microsoft.Maui.Storage.Preferences.Set("GoogleSignInInProgress", true);
-					System.Diagnostics.Debug.WriteLine("Also stored in MAUI Preferences");
-					Console.WriteLine("Also stored in MAUI Preferences");
-				}
-				catch (Exception prefEx)
-				{
-					// Preferences might not be ready yet - that's OK, NSUserDefaults is the primary storage
-					System.Diagnostics.Debug.WriteLine($"Preferences not ready (this is OK): {prefEx.Message}");
-					Console.WriteLine($"Preferences not ready (this is OK): {prefEx.Message}");
-				}
-			}
-			catch (Exception ex)
-			{
-				System.Diagnostics.Debug.WriteLine($"ERROR storing OAuth callback: {ex.Message}");
-				System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-				Console.WriteLine($"ERROR storing OAuth callback: {ex.Message}");
-				Console.WriteLine($"Stack trace: {ex.StackTrace}");
-			}
-			
-			// Try WebAuthenticator (works if app wasn't terminated)
+			// Try WebAuthenticator.Default.OpenUrl first (most direct for OAuth)
 			try
 			{
 				var handled = WebAuthenticator.Default.OpenUrl(url);
 				if (handled)
 				{
-					System.Diagnostics.Debug.WriteLine("WebAuthenticator handled the URL callback");
-					Console.WriteLine("WebAuthenticator handled the URL callback");
+					System.Diagnostics.Debug.WriteLine("✓ WebAuthenticator.Default.OpenUrl handled the URL callback - OAuth flow should complete");
+					Console.WriteLine("✓ WebAuthenticator.Default.OpenUrl handled the URL callback - OAuth flow should complete");
 					return true;
+				}
+				else
+				{
+					System.Diagnostics.Debug.WriteLine("⚠ WebAuthenticator.Default.OpenUrl returned false - trying Platform.OpenUrl");
+					Console.WriteLine("⚠ WebAuthenticator.Default.OpenUrl returned false - trying Platform.OpenUrl");
 				}
 			}
 			catch (Exception ex)
 			{
-				System.Diagnostics.Debug.WriteLine($"Error forwarding URL to WebAuthenticator: {ex.Message}");
-				Console.WriteLine($"Error forwarding URL to WebAuthenticator: {ex.Message}");
+				System.Diagnostics.Debug.WriteLine($"Error in WebAuthenticator.Default.OpenUrl: {ex.Message}");
+				Console.WriteLine($"Error in WebAuthenticator.Default.OpenUrl: {ex.Message}");
 			}
 			
-			// If WebAuthenticator didn't handle it, the URL is already stored above
-			System.Diagnostics.Debug.WriteLine("WebAuthenticator did not handle URL - URL stored for processing on app startup");
-			Console.WriteLine("WebAuthenticator did not handle URL - URL stored for processing on app startup");
+			// STEP 2: Try Platform.OpenUrl as fallback (MAUI's general URL handler)
+			try
+			{
+				var handled = Platform.OpenUrl(application, url, options);
+				if (handled)
+				{
+					System.Diagnostics.Debug.WriteLine("✓ Platform.OpenUrl handled the URL callback - OAuth flow should complete");
+					Console.WriteLine("✓ Platform.OpenUrl handled the URL callback - OAuth flow should complete");
+					return true;
+				}
+				else
+				{
+					System.Diagnostics.Debug.WriteLine("⚠ Platform.OpenUrl returned false - storing for persistence");
+					Console.WriteLine("⚠ Platform.OpenUrl returned false - storing for persistence");
+				}
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"Error in Platform.OpenUrl: {ex.Message}");
+				Console.WriteLine($"Error in Platform.OpenUrl: {ex.Message}");
+			}
+		
+			// STEP 3: If neither handled it, store the URL for persistence
+			// This ensures the callback is processed even if the app was terminated
+			System.Diagnostics.Debug.WriteLine($"Neither WebAuthenticator nor Platform.OpenUrl handled {schemeType} - storing for persistence");
+			Console.WriteLine($"Neither WebAuthenticator nor Platform.OpenUrl handled {schemeType} - storing for persistence");
 			
-			return true;
+			// Store in NSUserDefaults for persistence (works even if app was terminated)
+			try
+			{
+				var userDefaults = Foundation.NSUserDefaults.StandardUserDefaults;
+				userDefaults.SetString(url.AbsoluteString, "PendingOAuthCallback");
+				userDefaults.SetBool(true, "GoogleSignInInProgress");
+				userDefaults.Synchronize();
+				
+				System.Diagnostics.Debug.WriteLine($"✓ Stored OAuth callback in NSUserDefaults: {url.AbsoluteString.Substring(0, Math.Min(100, url.AbsoluteString.Length))}...");
+				Console.WriteLine($"✓ Stored OAuth callback in NSUserDefaults: {url.AbsoluteString.Substring(0, Math.Min(100, url.AbsoluteString.Length))}...");
+				
+				// Post notification so app can process it
+				NSNotificationCenter.DefaultCenter.PostNotificationName("PendingOAuthCallbackFound", null);
+				
+				// Return true to indicate we handled it (even if WebAuthenticator didn't process it yet)
+				return true;
+			}
+			catch (Exception ex)
+			{
+				System.Diagnostics.Debug.WriteLine($"Error storing OAuth callback: {ex.Message}");
+				Console.WriteLine($"Error storing OAuth callback: {ex.Message}");
+			}
 		}
 		
+		// STEP 3: Call base implementation as fallback
 		return base.OpenUrl(application, url, options);
 	}
 	
@@ -357,6 +331,51 @@ public class AppDelegate : MauiUIApplicationDelegate
 				NSNotificationCenter.DefaultCenter.PostNotificationName("PendingOAuthCallbackFound", null);
 				System.Diagnostics.Debug.WriteLine("Posted PendingOAuthCallbackFound notification");
 				Console.WriteLine("Posted PendingOAuthCallbackFound notification");
+			}
+			else if (signInInProgress && string.IsNullOrEmpty(pendingCallback))
+			{
+				// Sign-in is in progress but no callback was received
+				// This means the app was terminated during OAuth flow and callback was lost
+				// Check if we have a stored OAuth URL to resume
+				var storedAuthUrl = userDefaults.StringForKey("GoogleOAuthAuthUrl");
+				var storedTimestamp = userDefaults.DoubleForKey("GoogleOAuthTimestamp");
+				
+				if (!string.IsNullOrEmpty(storedAuthUrl) && storedTimestamp > 0)
+				{
+					var storedTime = DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(Math.Round(storedTimestamp)));
+					var elapsed = DateTimeOffset.UtcNow - storedTime;
+					
+					if (elapsed < TimeSpan.FromMinutes(5))
+					{
+						System.Diagnostics.Debug.WriteLine($"⚠ App was terminated during OAuth flow. Stored OAuth URL is {elapsed.TotalSeconds:F1}s old - can be resumed.");
+						Console.WriteLine($"⚠ App was terminated during OAuth flow. Stored OAuth URL is {elapsed.TotalSeconds:F1}s old - can be resumed.");
+						System.Diagnostics.Debug.WriteLine("Posting notification to resume OAuth flow...");
+						Console.WriteLine("Posting notification to resume OAuth flow...");
+						
+						// Post notification to trigger OAuth resumption
+						NSNotificationCenter.DefaultCenter.PostNotificationName("ResumeOAuthFlow", null);
+					}
+					else
+					{
+						System.Diagnostics.Debug.WriteLine($"⚠ App was terminated during OAuth flow. Stored OAuth URL is too old ({elapsed.TotalMinutes:F1} minutes) - clearing stale data.");
+						Console.WriteLine($"⚠ App was terminated during OAuth flow. Stored OAuth URL is too old ({elapsed.TotalMinutes:F1} minutes) - clearing stale data.");
+						
+						// Clear stale OAuth data
+						userDefaults.SetBool(false, "GoogleSignInInProgress");
+						userDefaults.RemoveObject("GoogleOAuthAuthUrl");
+						userDefaults.RemoveObject("GoogleOAuthRedirectUri");
+						userDefaults.RemoveObject("GoogleOAuthState");
+						userDefaults.RemoveObject("GoogleOAuthNonce");
+						userDefaults.RemoveObject("GoogleOAuthTimestamp");
+						userDefaults.RemoveObject("GoogleSignInStartedUtc");
+						userDefaults.Synchronize();
+					}
+				}
+				else
+				{
+					System.Diagnostics.Debug.WriteLine("⚠ App was terminated during OAuth flow but no stored OAuth URL found. User will need to try again.");
+					Console.WriteLine("⚠ App was terminated during OAuth flow but no stored OAuth URL found. User will need to try again.");
+				}
 				
 				// Also try to sync to Preferences if MAUI is ready
 				try
@@ -407,8 +426,8 @@ public class AppDelegate : MauiUIApplicationDelegate
 		var schemes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Fallback known client IDs in case GoogleService-Info.plist is outdated
-			"com.googleusercontent.apps.1021759232753-mm6ns7f4r20aohg8ric4med68kqtul9e",
-			"com.googleusercontent.apps.1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh"
+			// This should match the REVERSED_CLIENT_ID in GoogleService-Info.plist
+			"com.googleusercontent.apps.1021759232753-hhfhegcuq82cc9er9slf1r3iuqkkpbsh"
 		};
 
 		try
