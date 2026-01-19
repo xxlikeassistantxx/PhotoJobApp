@@ -19,6 +19,36 @@
         Route="MainPage" />
 
     <ShellContent
+        Title="➕ Create New Job"
+        ContentTemplate="{DataTemplate local:AddEditJobPage}"
+        Route="AddEditJobPage" />
+
+    <ShellContent
+        Title="📋 Create Job Type"
+        ContentTemplate="{DataTemplate local:AddEditJobTypePage}"
+        Route="AddEditJobTypePage" />
+
+    <ShellContent
+        Title="🔍 Search &amp; Filter"
+        ContentTemplate="{DataTemplate local:MainPage}"
+        Route="MainPageSearch" />
+
+    <ShellContent
+        Title="📈 Job Analysis"
+        ContentTemplate="{DataTemplate local:JobAnalysisPage}"
+        Route="JobAnalysisPage" />
+
+    <ShellContent
+        Title="⚙️ Job Type Management"
+        ContentTemplate="{DataTemplate local:JobTypeManagementPage}"
+        Route="JobTypeManagementPage" />
+
+    <ShellContent
+        Title="👤 Account Management"
+        ContentTemplate="{DataTemplate local:AccountPage}"
+        Route="AccountPage" />
+
+    <ShellContent
         Title="☁️ Cloud Management"
         ContentTemplate="{DataTemplate local:CloudManagementPage}"
         Route="CloudManagementPage" />

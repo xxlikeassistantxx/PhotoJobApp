@@ -21,13 +21,13 @@ namespace PhotoJobApp.Services
             _database = new SQLiteAsyncConnection(_databasePath);
         }
 
-        public static async Task<JobTypeService> CreateAsync(string userId = null)
+        public static async Task<JobTypeService> CreateAsync(string userId = null, string idToken = null)
         {
             var service = new JobTypeService();
             service._userId = userId;
             if (!string.IsNullOrEmpty(userId))
             {
-                service._cloudService = new CloudJobTypeService(userId);
+                service._cloudService = new CloudJobTypeService(userId, idToken);
             }
             await service.InitializeDatabaseAsync();
             return service;

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Maui.Controls;
 
 namespace PhotoJobApp.Converters
 {
@@ -8,7 +9,11 @@ namespace PhotoJobApp.Converters
         {
             if (value is bool isUrgent)
             {
-                return isUrgent ? Colors.Red : Colors.Transparent;
+                var color = isUrgent ? Colors.Red : Colors.Transparent;
+                // Border.Background expects Brush; Frame.BackgroundColor expects Color
+                if (targetType != null && typeof(Brush).IsAssignableFrom(targetType))
+                    return new SolidColorBrush(color);
+                return color;
             }
             return Colors.Transparent;
         }

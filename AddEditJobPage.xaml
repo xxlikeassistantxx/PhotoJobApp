@@ -6,6 +6,10 @@
 
     <ScrollView>
         <StackLayout Padding="20" Spacing="15">
+            <!-- Job Type Selection (only for new jobs) -->
+            <Label x:Name="JobTypeLabel" Text="Job Type *" Style="{StaticResource SubHeadline}"/>
+            <Picker x:Name="JobTypePicker" Title="Select job type" SelectedIndexChanged="OnJobTypeSelected"/>
+            
             <!-- Title -->
             <Label Text="Job Title *" Style="{StaticResource SubHeadline}"/>
             <Entry x:Name="TitleEntry" Placeholder="Enter job title" Text="{Binding Job.Title}"/>
@@ -16,28 +20,39 @@
                     Text="{Binding Job.Description}" HeightRequest="80"/>
 
             <!-- Client Information -->
+            <StackLayout x:Name="ClientInfoSection" IsVisible="False">
             <Label Text="Client Information" Style="{StaticResource SubHeadline}"/>
             <Entry x:Name="ClientNameEntry" Placeholder="Client name *" Text="{Binding Job.ClientName}"/>
             <Entry x:Name="ClientPhoneEntry" Placeholder="Phone number" Text="{Binding Job.ClientPhone}" Keyboard="Telephone"/>
             <Entry x:Name="ClientEmailEntry" Placeholder="Email address" Text="{Binding Job.ClientEmail}" Keyboard="Email"/>
+            </StackLayout>
 
             <!-- Price -->
+            <StackLayout x:Name="PricingSection" IsVisible="False">
             <Label Text="Price *" Style="{StaticResource SubHeadline}"/>
             <Entry x:Name="PriceEntry" Placeholder="0.00" Text="{Binding Job.Price}" Keyboard="Numeric"/>
+            </StackLayout>
 
             <!-- Status -->
+            <StackLayout x:Name="StatusSection" IsVisible="False">
             <Label Text="Status *" Style="{StaticResource SubHeadline}"/>
             <Picker x:Name="StatusPicker" Title="Select status" />
+            </StackLayout>
 
             <!-- Dates -->
+            <StackLayout x:Name="DueDateSection" IsVisible="False">
             <Label Text="Due Date" Style="{StaticResource SubHeadline}"/>
             <DatePicker x:Name="DueDatePicker" Date="{Binding Job.DueDate}"/>
+            </StackLayout>
 
             <!-- Location -->
+            <StackLayout x:Name="LocationSection" IsVisible="False">
             <Label Text="Location" Style="{StaticResource SubHeadline}"/>
             <Entry x:Name="LocationEntry" Placeholder="Job location" Text="{Binding Job.Location}"/>
+            </StackLayout>
 
             <!-- Photos -->
+            <StackLayout x:Name="PhotosSection" IsVisible="False">
             <Label Text="Photos" Style="{StaticResource SubHeadline}"/>
             <Frame Padding="15" CornerRadius="10" BackgroundColor="LightGray">
                 <StackLayout>
@@ -70,16 +85,25 @@
                     </CollectionView>
                 </StackLayout>
             </Frame>
+            </StackLayout>
 
             <!-- Notes -->
+            <StackLayout x:Name="NotesSection" IsVisible="False">
             <Label Text="Notes" Style="{StaticResource SubHeadline}"/>
             <Editor x:Name="NotesEditor" Placeholder="Additional notes" 
                     Text="{Binding Job.Notes}" HeightRequest="80"/>
+            </StackLayout>
 
             <!-- Urgent Flag -->
-            <StackLayout Orientation="Horizontal">
+            <StackLayout x:Name="UrgentSection" IsVisible="False" Orientation="Horizontal">
                 <CheckBox x:Name="UrgentCheckBox" IsChecked="{Binding Job.IsUrgent}"/>
                 <Label Text="Mark as urgent" VerticalOptions="Center" Margin="10,0,0,0"/>
+            </StackLayout>
+
+            <!-- Custom Fields -->
+            <StackLayout x:Name="CustomFieldsSection" IsVisible="False">
+                <Label Text="Custom Fields" Style="{StaticResource SubHeadline}" FontAttributes="Bold"/>
+                <StackLayout x:Name="CustomFieldsContainer" Spacing="10"/>
             </StackLayout>
 
             <!-- Buttons -->

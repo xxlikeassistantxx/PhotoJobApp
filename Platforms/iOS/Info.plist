@@ -35,12 +35,12 @@
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-		<key>CFBundleURLSchemes</key>
-		<array>
-			<string>com.pinebelttrophy.photojobapp2025</string>
-			<string>com.googleusercontent.apps.1021759232753-mm6ns7f4r20aohg8ric4med68kqtul9e</string>
-				<string>com.googleusercontent.apps.1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh</string>
-		</array>
+			<key>CFBundleURLName</key>
+			<string>Google Auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1021759232753-hhfhegcuq82cc9er9slf1r3iuqkkpbsh</string>
+			</array>
 		</dict>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>

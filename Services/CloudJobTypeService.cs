@@ -9,17 +9,25 @@ namespace PhotoJobApp.Services
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
         private readonly string _userId;
+        private readonly string? _idToken;
 
-        public CloudJobTypeService(string userId)
+        public CloudJobTypeService(string userId, string? idToken = null)
         {
             _userId = userId;
+            _idToken = idToken;
             _httpClient = new HttpClient();
-            _baseUrl = $"https://{FirebaseConfig.ProjectId}.firebaseio.com/{FirebaseConfig.JobTypesCollection}/{userId}";
+            _baseUrl = $"{FirebaseConfig.DatabaseUrl}/{FirebaseConfig.JobTypesCollection}/{userId}";
             
             System.Diagnostics.Debug.WriteLine($"CloudJobTypeService: Initialized for user {userId}");
             System.Diagnostics.Debug.WriteLine($"CloudJobTypeService: Base URL: {_baseUrl}");
             Console.WriteLine($"CloudJobTypeService: Initialized for user {userId}");
             Console.WriteLine($"CloudJobTypeService: Base URL: {_baseUrl}");
+        }
+
+        private string GetAuthToken()
+        {
+            // Use ID token if available, otherwise fall back to API key
+            return !string.IsNullOrEmpty(_idToken) ? _idToken : FirebaseConfig.ApiKey;
         }
 
         public async Task<List<JobType>> GetJobTypesAsync()
@@ -29,7 +37,7 @@ namespace PhotoJobApp.Services
                 System.Diagnostics.Debug.WriteLine($"CloudJobTypeService: Getting job types from URL: {_baseUrl}.json");
                 Console.WriteLine($"CloudJobTypeService: Getting job types from URL: {_baseUrl}.json");
                 
-                var response = await _httpClient.GetAsync($"{_baseUrl}.json?auth={FirebaseConfig.ApiKey}");
+                var response = await _httpClient.GetAsync($"{_baseUrl}.json?auth={GetAuthToken()}");
                 
                 System.Diagnostics.Debug.WriteLine($"CloudJobTypeService: Response status: {response.StatusCode}");
                 Console.WriteLine($"CloudJobTypeService: Response status: {response.StatusCode}");
@@ -97,7 +105,7 @@ namespace PhotoJobApp.Services
             }
         }
 
-        public async Task<bool> SaveJobTypeAsync(JobType jobType)
+        public async Task<bool> SaveJobTypeAsync(JobType jobType, bool shareWithLinkedAccounts = true)
         {
             try
             {
@@ -110,14 +118,14 @@ namespace PhotoJobApp.Services
                 if (!string.IsNullOrEmpty(jobType.CloudId))
                 {
                     // Update existing job type
-                    response = await _httpClient.PutAsync($"{_baseUrl}/{jobType.CloudId}.json?auth={FirebaseConfig.ApiKey}", content);
+                    response = await _httpClient.PutAsync($"{_baseUrl}/{jobType.CloudId}.json?auth={GetAuthToken()}", content);
                     System.Diagnostics.Debug.WriteLine($"CloudJobTypeService: Updated job type {jobType.Name} (CloudId: {jobType.CloudId}) in cloud");
                     Console.WriteLine($"CloudJobTypeService: Updated job type {jobType.Name} (CloudId: {jobType.CloudId}) in cloud");
                 }
                 else
                 {
                     // Create new job type
-                    response = await _httpClient.PostAsync($"{_baseUrl}.json?auth={FirebaseConfig.ApiKey}", content);
+                    response = await _httpClient.PostAsync($"{_baseUrl}.json?auth={GetAuthToken()}", content);
                     
                     if (response.IsSuccessStatusCode)
                     {
@@ -132,6 +140,12 @@ namespace PhotoJobApp.Services
                     }
                 }
 
+                // If sharing is enabled, also save to shared folder for linked accounts
+                if (shareWithLinkedAccounts && response.IsSuccessStatusCode)
+                {
+                    await SaveJobTypeToSharedFolderAsync(jobType, data);
+                }
+
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -142,11 +156,35 @@ namespace PhotoJobApp.Services
             }
         }
 
+        private async Task SaveJobTypeToSharedFolderAsync(JobType jobType, Dictionary<string, object> data)
+        {
+            try
+            {
+                var accountLinkingService = new AccountLinkingService(_userId);
+                var linkedUserIds = await accountLinkingService.GetSharedUserIdsAsync();
+                
+                foreach (var linkedUserId in linkedUserIds)
+                {
+                    var sharedUrl = $"{FirebaseConfig.DatabaseUrl}/sharedJobTypes/{linkedUserId}/jobTypes/{jobType.CloudId}.json?auth={GetAuthToken()}";
+                    var json = JsonSerializer.Serialize(data);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    
+                    await _httpClient.PutAsync(sharedUrl, content);
+                    System.Diagnostics.Debug.WriteLine($"CloudJobTypeService: Saved job type {jobType.Name} to shared folder for user {linkedUserId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CloudJobTypeService: Error saving job type to shared folder: {ex.Message}");
+                // Don't fail the main save if shared folder save fails
+            }
+        }
+
         public async Task<bool> DeleteJobTypeAsync(string cloudId)
         {
             try
             {
-                var response = await _httpClient.DeleteAsync($"{_baseUrl}/{cloudId}.json?auth={FirebaseConfig.ApiKey}");
+                var response = await _httpClient.DeleteAsync($"{_baseUrl}/{cloudId}.json?auth={GetAuthToken()}");
                 
                 if (response.IsSuccessStatusCode)
                 {

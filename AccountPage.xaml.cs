@@ -1,15 +1,23 @@
 using PhotoJobApp.Services;
+using System.Collections.ObjectModel;
 
 namespace PhotoJobApp
 {
     public partial class AccountPage : ContentPage
     {
         private readonly FirebaseAuthService _authService;
+        private AccountLinkingService? _accountLinkingService;
+        private ObservableCollection<LinkedAccountInfo> _linkedAccounts = new();
+
+        public AccountPage() : this(new FirebaseAuthService())
+        {
+        }
 
         public AccountPage(FirebaseAuthService authService)
         {
             InitializeComponent();
             _authService = authService;
+            LinkedAccountsCollectionView.ItemsSource = _linkedAccounts;
             LoadUserInformation();
         }
 
@@ -22,6 +30,10 @@ namespace PhotoJobApp
                 {
                     UserEmailLabel.Text = currentUser.Email;
                     MemberSinceLabel.Text = DateTime.Now.ToString("MMMM yyyy"); // You could store actual signup date
+                    
+                    // Initialize account linking service
+                    _accountLinkingService = new AccountLinkingService(currentUser.Id);
+                    await LoadLinkedAccountsAsync();
                 }
                 else
                 {
@@ -35,6 +47,116 @@ namespace PhotoJobApp
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading user information: {ex.Message}");
+            }
+        }
+
+        private async Task LoadLinkedAccountsAsync()
+        {
+            try
+            {
+                if (_accountLinkingService == null) return;
+                
+                var linkedAccounts = await _accountLinkingService.GetLinkedAccountsAsync();
+                _linkedAccounts.Clear();
+                foreach (var account in linkedAccounts)
+                {
+                    _linkedAccounts.Add(account);
+                }
+                
+                NoLinkedAccountsLabel.IsVisible = _linkedAccounts.Count == 0;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading linked accounts: {ex.Message}");
+            }
+        }
+
+        private async void OnLinkAccountClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                var email = LinkAccountEmailEntry.Text?.Trim();
+                if (string.IsNullOrEmpty(email))
+                {
+                    await DisplayAlert("Error", "Please enter an email address", "OK");
+                    return;
+                }
+
+                if (!email.Contains("@"))
+                {
+                    await DisplayAlert("Error", "Please enter a valid email address", "OK");
+                    return;
+                }
+
+                if (_accountLinkingService == null)
+                {
+                    await DisplayAlert("Error", "Account linking service not initialized. Please sign in.", "OK");
+                    return;
+                }
+
+                // Find user by email
+                var linkedUserId = await _accountLinkingService.FindUserIdByEmailAsync(email);
+                if (string.IsNullOrEmpty(linkedUserId))
+                {
+                    await DisplayAlert("Error", $"No account found with email: {email}\n\nNote: The user must have created an account first.", "OK");
+                    return;
+                }
+
+                // Check if already linked
+                var existingLinked = _linkedAccounts.FirstOrDefault(la => la.UserId == linkedUserId);
+                if (existingLinked != null)
+                {
+                    await DisplayAlert("Already Linked", $"Account {email} is already linked.", "OK");
+                    return;
+                }
+
+                // Link the account
+                var success = await _accountLinkingService.LinkAccountAsync(linkedUserId, email);
+                if (success)
+                {
+                    await DisplayAlert("Success", $"Account {email} has been linked successfully!", "OK");
+                    LinkAccountEmailEntry.Text = string.Empty;
+                    await LoadLinkedAccountsAsync();
+                }
+                else
+                {
+                    await DisplayAlert("Error", "Failed to link account. Please try again.", "OK");
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"Failed to link account: {ex.Message}", "OK");
+            }
+        }
+
+        private async void OnUnlinkAccountClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                if (sender is Button button && button.CommandParameter is LinkedAccountInfo account)
+                {
+                    var confirm = await DisplayAlert("Unlink Account", 
+                        $"Are you sure you want to unlink {account.Email}?", 
+                        "Yes", "No");
+                    
+                    if (confirm && _accountLinkingService != null)
+                    {
+                        var success = await _accountLinkingService.UnlinkAccountAsync(account.UserId);
+                        if (success)
+                        {
+                            await DisplayAlert("Success", $"Account {account.Email} has been unlinked.", "OK");
+                            await LoadLinkedAccountsAsync();
+                        }
+                        else
+                        {
+                            await DisplayAlert("Error", "Failed to unlink account. Please try again.", "OK");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"Failed to unlink account: {ex.Message}", "OK");
             }
         }
 

@@ -69,7 +69,7 @@ namespace PhotoJobApp
                 Console.WriteLine("Add Job Type button clicked");
                 
                 // Try Shell navigation first
-                await Shell.Current.GoToAsync("AddEditJobTypePage");
+                await Shell.Current.GoToAsync("///AddEditJobTypePage");
                 System.Diagnostics.Debug.WriteLine("Shell navigation to AddEditJobTypePage successful");
                 Console.WriteLine("Shell navigation to AddEditJobTypePage successful");
             }

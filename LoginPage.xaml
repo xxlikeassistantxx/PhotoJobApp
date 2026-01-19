@@ -111,6 +111,16 @@
                                 HeightRequest="50"
                                 CornerRadius="10"
                                 Clicked="OnGoogleSignInClicked"/>
+
+                        <!-- Debug: Show Redirect URL -->
+                        <Button Text="Show Redirect URL"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Primary}"
+                                BorderColor="{StaticResource Primary}"
+                                BorderWidth="1"
+                                HeightRequest="40"
+                                CornerRadius="8"
+                                Clicked="OnShowRedirectUrlClicked"/>
                     </StackLayout>
                 </Frame>
             </StackLayout>

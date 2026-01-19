@@ -316,12 +316,10 @@ namespace PhotoJobApp.Platforms.iOS
                     Console.WriteLine($"GoogleSignInService: Alternative path check: {(string.IsNullOrEmpty(altPath) ? "NOT FOUND" : altPath)}");
                 }
 
-                // Fallback: Use the CLIENT_ID from GoogleService-Info.plist directly (hardcoded as fallback)
-                // This is the iOS Client ID: 1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh.apps.googleusercontent.com
-                var fallbackClientId = "1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh.apps.googleusercontent.com";
-                System.Diagnostics.Debug.WriteLine($"GoogleSignInService: Using fallback CLIENT_ID: {fallbackClientId.Substring(0, Math.Min(30, fallbackClientId.Length))}...");
-                Console.WriteLine($"GoogleSignInService: Using fallback CLIENT_ID: {fallbackClientId.Substring(0, Math.Min(30, fallbackClientId.Length))}...");
-                return fallbackClientId;
+                // No CLIENT_ID found - this should not happen if GoogleService-Info.plist is properly configured
+                System.Diagnostics.Debug.WriteLine("GoogleSignInService: ERROR - CLIENT_ID not found in GoogleService-Info.plist. Please ensure the file is properly configured.");
+                Console.WriteLine("GoogleSignInService: ERROR - CLIENT_ID not found in GoogleService-Info.plist. Please ensure the file is properly configured.");
+                throw new InvalidOperationException("Google Sign-In CLIENT_ID not found. Please configure GoogleService-Info.plist with your Firebase project credentials.");
             }
             catch (Exception ex)
             {
@@ -330,8 +328,12 @@ namespace PhotoJobApp.Platforms.iOS
                 System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 
-                // Return fallback even on error
-                return "1021759232753-faphbn9aupbnev5uh958nhfhik05q8vh.apps.googleusercontent.com";
+                // Re-throw the exception if it's already an InvalidOperationException
+                if (ex is InvalidOperationException)
+                    throw;
+                
+                // Otherwise, wrap in a more descriptive exception
+                throw new InvalidOperationException("Failed to retrieve Google Sign-In CLIENT_ID from GoogleService-Info.plist. Please ensure the file exists and is properly configured.", ex);
             }
         }
 

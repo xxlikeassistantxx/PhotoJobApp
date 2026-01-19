@@ -54,19 +54,13 @@ namespace PhotoJobApp
 
         private async void OnEditClicked(object sender, EventArgs e)
         {
-            await Shell.Current.GoToAsync($"AddEditJobTypePage?JobType={_jobType.Id}");
+            await Shell.Current.GoToAsync($"///AddEditJobTypePage?JobType={_jobType.Id}");
         }
 
         private async void OnCreateJobClicked(object sender, EventArgs e)
         {
-            // Create a new job with this job type pre-selected
-            var newJob = new PhotoJob
-            {
-                JobTypeId = _jobType.Id,
-                Status = _jobType.StatusList?.FirstOrDefault() ?? "Pending"
-            };
-            
-            await Shell.Current.GoToAsync("AddEditJobPage");
+            // Navigate to AddEditJobPage with the job type pre-selected
+            await Shell.Current.GoToAsync($"///AddEditJobPage?JobTypeId={_jobType.Id}");
         }
 
         private async void OnPushToCloudClicked(object sender, EventArgs e)

@@ -1,7 +1,6 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using PhotoJobApp.Models;
 using PhotoJobApp.Services;
-using CommunityToolkit.Maui.Views;
 
 namespace PhotoJobApp
 {
@@ -92,7 +91,7 @@ namespace PhotoJobApp
 
         private async void OnAddJobClicked(object sender, EventArgs e)
         {
-            await Shell.Current.GoToAsync("AddEditJobPage");
+            await Shell.Current.GoToAsync("///AddEditJobPage");
         }
 
         private async void OnJobTapped(object sender, TappedEventArgs e)
@@ -112,7 +111,7 @@ namespace PhotoJobApp
                 switch (action)
                 {
                     case "Edit":
-                        await Shell.Current.GoToAsync($"AddEditJobPage?Job={job.Id}");
+                        await Shell.Current.GoToAsync($"///AddEditJobPage?Job={job.Id}");
                         break;
                     case "Delete":
                         await DeleteJobAsync(job);
@@ -212,33 +211,23 @@ namespace PhotoJobApp
 
         private async void OnJobTypesClicked(object sender, EventArgs e)
         {
-            await Shell.Current.GoToAsync("JobTypeManagementPage");
+            await Shell.Current.GoToAsync("///JobTypeManagementPage");
         }
 
         private async void OnCloudManagementClicked(object sender, EventArgs e)
         {
-            await Shell.Current.GoToAsync("//CloudManagementPage");
+            await Shell.Current.GoToAsync("///CloudManagementPage");
         }
 
         private async void OnAccountClicked(object sender, EventArgs e)
         {
             try
             {
-                // Get FirebaseAuthService from DI
-                var authService = Application.Current?.Handler?.MauiContext?.Services.GetService<FirebaseAuthService>();
-                if (authService == null)
-                {
-                    authService = new FirebaseAuthService();
-                }
-                
-                var accountPage = new AccountPage(authService);
-                await Navigation.PushAsync(accountPage);
+                await Shell.Current.GoToAsync("///AccountPage");
             }
             catch (Exception ex)
             {
-                await DisplayAlert("Error", $"Failed to open account page: {ex.Message}", "OK");
-                System.Diagnostics.Debug.WriteLine($"Error navigating to AccountPage: {ex.Message}");
-                Console.WriteLine($"Error navigating to AccountPage: {ex.Message}");
+                await DisplayAlert("Error", $"Failed to navigate: {ex.Message}", "OK");
             }
         }
     }
